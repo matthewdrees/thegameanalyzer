@@ -1,10 +1,12 @@
 # thegameanalyzer
 
-[Description for The Game](<https://boardgamegeek.com/boardgame/173090/game>) (card game).
+Analyze outcomes for the [The Game (card game)](https://boardgamegeek.com/boardgame/173090/game).
 
-With a _basic strategy_, how likely is that you have an _excellent result_ (< 10 cards remaining) or _beat the game_ (0 cards remaining)?
+With a basic strategy, how likely is that you have an excellent result (< 10 cards remaining) or beat the game (0 cards remaining)?
 
 ## Results
+
+(TODO: values are placeholders and not correct!!!)
 
 | # players | excellent result % | beat the game % | avg cards remaining | stddev | # reach | # reach (endgame) |
 |---|---|---|---|---|---|--|
