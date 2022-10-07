@@ -1,7 +1,9 @@
 #include "turn.hpp"
 
 #include <algorithm>
+#include <array>
 #include <cassert>
+#include <cmath>
 #include <iterator>
 #include <sstream>
 #include <vector>
@@ -228,14 +230,13 @@ namespace TheGameAnalyzer
             if (group_it != ten_groups.end())
             {
                 play.hand_mask = group_it->hand_mask;
-                play.pile_card_end = hand[group_it->lo];
                 i = group_it->lo;
             }
             else
             {
                 play.hand_mask = 1 << i; // card mask
-                play.pile_card_end = hand[i];
             }
+            play.pile_card_end = hand[i];
             hand_mask |= play.hand_mask;
             plays.push_back(play);
             last_card = hand[i];
@@ -274,13 +275,11 @@ namespace TheGameAnalyzer
                 }
             }
 
-            LEFT OFF HERE !!!!Play play;
-            = {card_mask, 1, i, i};
+            Play play;
             play.piles_index = piles_index;
             play.pile_card_start = last_card;
             if (group_it != ten_groups.end())
             {
-                play *group_it;
                 // Add in all proceeding unmasked cards in this group to the group.
                 for (size_t j = i; j < group_it->hi; ++j)
                 {
@@ -291,7 +290,14 @@ namespace TheGameAnalyzer
                     }
                 }
                 i = group_it->lo;
+                play.hand_mask |= group_it->hand_mask;
+                i = group_it->lo;
             }
+            else
+            {
+                play.hand_mask = card_mask;
+            }
+            play.pile_card_end = hand[i];
             hand_mask |= play.hand_mask;
             plays.push_back(play);
             last_card = hand[i];
@@ -299,12 +305,117 @@ namespace TheGameAnalyzer
         return plays;
     }
 
-    // int get_turn_score(const Piles &piles, int cards_needed, int cards_played)
-    // {
-    //     assert(cards_played >= 0);
-    //     const int additional_score = 100 * std::min(cards_played, cards_needed);
-    //     return additional_score + 198 - piles[0] - piles[1] + piles[2] + piles[3];
-    // }
+    std::string to_string(const Turn &turn)
+    {
+        std::ostringstream oss;
+        oss << "{ piles: " << to_string(turn.piles)
+            << ", hand_mask: 0x" << std::hex << turn.hand_mask
+            << "\n";
+        return oss.str();
+    }
+
+    static int add_piles(const Piles &piles)
+    {
+        return piles[0] + piles[1] - piles[2] - piles[3];
+    }
+
+    static int get_sum_of_pile_extremes(const Piles &piles)
+    {
+        return std::min(piles[0], piles[1]) - std::max(piles[2], piles[3]);
+    }
+
+    bool is_turn2_better(const Turn &t1, const Turn &t2, int min_cards_for_turn, int card_reach_distance)
+    {
+        const int t1_num_cards = get_num_cards_in_hand_mask(t1.hand_mask);
+        const int t2_num_cards = get_num_cards_in_hand_mask(t2.hand_mask);
+        const bool t1_has_min_cards = t1_num_cards >= min_cards_for_turn;
+        const bool t2_has_min_cards = t2_num_cards >= min_cards_for_turn;
+        if (t1_has_min_cards != t2_has_min_cards)
+        {
+            // 1. One turn has minimum cards played and the other doesn't...
+            return t2_has_min_cards;
+        }
+        const int piles1_sum = add_piles(t1.piles);
+        const int piles2_sum = add_piles(t2.piles);
+        const int delta_per_card = piles2_sum - piles1_sum + (t1_num_cards - t2_num_cards) * card_reach_distance;
+        if (delta_per_card < 0)
+        {
+            // 2. ... otherwise prefer the better points/card played...
+            return true;
+        }
+        else if (delta_per_card == 0)
+        {
+            if (t1_num_cards < t2_num_cards)
+            {
+                // 3. ... otherwise prefer the turn with more cards...
+                return true;
+            }
+            if (t1_num_cards == t2_num_cards)
+            {
+                const int sum_of_pile_extremes1 = get_sum_of_pile_extremes(t1.piles);
+                const int sum_of_pile_extremes2 = get_sum_of_pile_extremes(t2.piles);
+                if (sum_of_pile_extremes2 < sum_of_pile_extremes1)
+                {
+                    // 4. ... otherwise prefer to keep the extreme piles intact...
+                    return true;
+                }
+                // TBD: 5. ... otherwise prefer the up/down direction with the
+                // lowest combined action?
+            }
+        }
+        return false;
+    }
+
+    static void get_plays_helper(std::vector<Plays> &vec_of_plays, const Piles &piles, size_t piles_index, Card max_card, const Hand &hand, const TenGroups &ten_groups, int min_cards_for_turn, int card_reach_distance)
+    {
+        auto plays = get_plays_ascending(piles[piles_index], max_card, hand, ten_groups, min_cards_for_turn, card_reach_distance);
+        if (!plays.empty())
+        {
+            vec_of_plays.push_back(std::move(plays));
+        }
+    }
+
+    static void get_plays_helper_flipped(std::vector<Plays> &vec_of_plays, const Piles &piles, size_t piles_index, Card min_card, const Hand &hand, const TenGroups &ten_groups, int min_cards_for_turn, int card_reach_distance)
+    {
+        flip_card(min_card);
+        auto pile_card = piles[piles_index];
+        flip_card(pile_card);
+        auto plays = get_plays_ascending(pile_card, min_card, hand, ten_groups, min_cards_for_turn, card_reach_distance);
+        if (!plays.empty())
+        {
+            flip_plays(plays, hand.size());
+            vec_of_plays.push_back(std::move(plays));
+        }
+    }
+
+    std::vector<Plays> get_vec_of_plays(const Piles &piles, const Hand &hand, int min_cards_for_turn, int card_reach_distance)
+    {
+        std::vector<Plays> vec_of_plays;
+
+        // ascending piles
+        {
+            const Card pile0_max_card = piles[0] <= piles[1] ? piles[1] : 100;
+            const Card pile1_max_card = piles[0] > piles[1] ? piles[0] : 100;
+            const auto ten_groups = get_ten_groups(hand);
+
+            get_plays_helper(vec_of_plays, piles, 0, pile0_max_card, hand, ten_groups, min_cards_for_turn, card_reach_distance);
+            get_plays_helper(vec_of_plays, piles, 1, pile1_max_card, hand, ten_groups, min_cards_for_turn, card_reach_distance);
+        }
+
+        // descending piles
+        {
+            auto flipped_hand = hand;
+            flip_hand(flipped_hand);
+
+            const Card pile2_min_card = piles[2] >= piles[3] ? piles[3] : 1;
+            const Card pile3_min_card = piles[2] < piles[3] ? piles[2] : 1;
+            const auto ten_groups = get_ten_groups(flipped_hand);
+
+            get_plays_helper_flipped(vec_of_plays, piles, 2, pile2_min_card, flipped_hand, ten_groups, min_cards_for_turn, card_reach_distance);
+            get_plays_helper_flipped(vec_of_plays, piles, 3, pile3_min_card, flipped_hand, ten_groups, min_cards_for_turn, card_reach_distance);
+        }
+        return vec_of_plays;
+    }
 
     struct BestPlayCalculator
     {
@@ -317,8 +428,23 @@ namespace TheGameAnalyzer
         void recurse(const Turn &cur_turn, size_t plays_index);
     };
 
-    Turn do_best_turn(const Piles &piles, const Hand &hand, int min_cards_for_turn, int card_reach_distance)
+    Turn find_best_turn(const Piles &piles, const Hand &hand, int min_cards_for_turn, int card_reach_distance)
     {
+        const auto vec_of_plays = get_vec_of_plays(piles, hand, min_cards_for_turn, card_reach_distance);
+        std::array<size_t, 4> plays_indexes = {0};
+
+        Turn best_turn;
+        for (size_t i = 0; i < vec_of_plays.size(); ++i)
+        {
+            Plays plays;
+            plays.push_back(vec_of_plays[i][plays_indexes[i]++]);
+
+            LEFT OFF HERE(unfortunately)
+
+                for (size_t j = 0; j < vec_of_plays.size();)
+            {
+            }
+        }
         BestPlayCalculator bpc;
         bpc.best_turn.piles = piles;
         bpc.min_cards_for_turn = min_cards_for_turn;
@@ -328,14 +454,6 @@ namespace TheGameAnalyzer
         {
             return bpc.best_turn;
         }
-
-        const auto ten_groups = get_ten_groups(hand);
-        bpc.pile_moves[0] = get_plays_ascending(piles[0], hand, ten_groups, min_cards_for_turn, card_reach_distance);
-        bpc.pile_moves[1] = get_plays_ascending(piles[1], hand, ten_groups, min_cards_for_turn, card_reach_distance);
-        const auto flipped_hand = flip_it_and_reverse_it(hand);
-        const auto flipped_movegroups = flip_it_and_reverse_it(ten_groups);
-        bpc.pile_moves[2] = get_plays_ascending(flip_it_and_reverse_it(piles[2]), flipped_movegroups, flipped_hand, min_cards_for_turn, card_reach_distance);
-        bpc.pile_moves[3] = get_plays_ascending(flip_it_and_reverse_it(piles[3]), flipped_movegroups, flipped_hand, min_cards_for_turn, card_reach_distance);
 
         Turn cur_turn(piles);
         cur_turn.num_cards_needed = min_cards_for_turn;
@@ -347,21 +465,6 @@ namespace TheGameAnalyzer
     bool pile_index_is_ascending_pile(size_t pile_index)
     {
         return pile_index < 2;
-    }
-
-    constexpr bool operator<(const Turn &t1, const Turn &t2)
-    {
-        if (t1.num_cards_needed != t2.num_cards_needed)
-        {
-            return t1.num_cards_needed > t2.num_cards_needed;
-        }
-        const int score1 = t1.piles_sum + t1.extra_play_points;
-        const int score2 = t2.piles_sum + t2.extra_play_points;
-        if (score1 != score2)
-        {
-            return score1 < score2;
-        }
-        return t1.extra_play_points < t2.extra_play_points;
     }
 
     bool Turn::do_move(const Play &move, size_t pile_index, const Hand &hand, int card_reach_distance)

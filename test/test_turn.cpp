@@ -158,7 +158,7 @@ int test_do_best_turn_2_cards_1_over()
     struct TestCase
     {
         Piles piles;
-        std::vector<Card> cards;
+        std::vector<Card> hand;
         Piles exp_piles;
         std::vector<Card> exp_cards;
     };
@@ -177,113 +177,165 @@ int test_do_best_turn_2_cards_1_over()
     int num_fails = 0;
     // for (const auto &tc : test_cases)
     {
-        // Turn do_best_turn(tc.piles, tc.cards)
+        // Turn do_best_turn(tc.piles, tc.hand)
     }
     return num_fails;
 }
 
-int test_get_moves_ascending_2_cards_1_over()
+int test_get_plays_ascending_2_cards_1_over()
 {
     struct TestCase
     {
         Card pile_card;
-        std::vector<Card> cards;
-        Moves moves;
+        Hand hand;
+        Plays exp;
     };
 
     TestCase test_cases[] = {
         {5, {}, {}},
         {5, {4}, {}},
-        {5, {6}, {{0x1, 1, 0, 0}}},
-        {2, {3, 17, 37, 41, 43, 51, 56, 61}, {{0x1, 1, 0, 0}, {0x2, 1, 1, 1}}},
-        {26, {3, 17, 37, 41, 43, 51, 56, 61}, {{0x4, 1, 2, 2}, {0xf8, 5, 3, 7}}},
-        {40, {3, 17, 37, 41, 43, 51, 56, 61}, {{0xf8, 5, 3, 7}}},
-        {42, {3, 17, 37, 41, 43, 51, 56, 61}, {{0xf8, 5, 3, 7}}},
-        {44, {3, 17, 37, 41, 43, 51, 56, 61}, {{0xe8, 4, 3, 7}}},
-        {43, {3, 17, 37, 41, 42, 51, 56, 61}, {{0xe8, 4, 3, 7}, {0x10, 1, 4, 4}}},
-        {54, {3, 17, 37, 41, 43, 51, 56, 61}, {{0xe8, 4, 3, 7}}},
-        {57, {3, 17, 37, 41, 43, 51, 56, 61}, {{0xa8, 3, 3, 7}}},
-        {24, {25, 30, 35, 40}, {{0x5, 2, 0, 2}}},
-        {29, {25, 30, 35, 40}, {{0x5, 2, 0, 2}}},
-        {34, {25, 30, 35, 40}, {{0x5, 2, 0, 2}}},
-        {36, {25, 30, 35, 40}, {{0xa, 2, 1, 3}}},
-        {13, {2, 10, 12, 20}, {{0xa, 2, 1, 3}}},
-        {13, {2, 11, 12, 21}, {{0xa, 2, 1, 3}, {0x5, 2, 0, 2}}},
-        {10, {2, 11, 12, 21}, {{0x5, 2, 0, 2}}},
+        {5, {6}, {{0x1, 1, 5, 6, 1}}},
+        {2, {3, 17, 37, 41, 43, 51, 56, 61}, {{0x1, 1, 2, 3, 1}, {0x2, 1, 3, 17, 14}}},
+        {26, {3, 17, 37, 41, 43, 51, 56, 61}, {{0x4, 1, 26, 37, 11}, {0xf8, 1, 37, 41, 4}}},
+        {40, {3, 17, 37, 41, 43, 51, 56, 61}, {{0xf8, 1, 40, 41, 1}}},
+        {42, {3, 17, 37, 41, 43, 51, 56, 61}, {{0xf8, 1, 42, 41, -1}}},
+        {44, {3, 17, 37, 41, 43, 51, 56, 61}, {{0xe8, 1, 44, 41, -3}}},
+        {43, {3, 17, 37, 41, 42, 51, 56, 61}, {{0xe8, 1, 43, 41, -2}, {0x10, 1, 41, 42, 1}}},
+        {54, {3, 17, 37, 41, 43, 51, 56, 61}, {{0xe8, 1, 54, 41, -13}}},
+        {57, {3, 17, 37, 41, 43, 51, 56, 61}, {{0xa8, 1, 57, 41, -16}}},
+        {24, {25, 30, 35, 40}, {{0x5, 1, 24, 25, 1}}},
+        {29, {25, 30, 35, 40}, {{0x5, 1, 29, 25, -4}}},
+        {34, {25, 30, 35, 40}, {{0x5, 1, 34, 25, -9}}},
+        {36, {25, 30, 35, 40}, {{0xa, 1, 36, 30, -6}}},
+        {13, {2, 10, 12, 20}, {{0xa, 1, 13, 10, -3}}},
+        {13, {2, 11, 12, 21}, {{0xa, 1, 13, 11, -2}, {0x5, 1, 11, 2, -9}}},
+        {10, {2, 11, 12, 21}, {{0x5, 1, 10, 2, -8}}},
         {31, {2, 11, 12, 20, 21, 29, 30, 39}, {
-                                                  {0x12, 2, 1, 4},
-                                                  {0x5, 2, 0, 2},
+                                                  {0x12, 1, 31, 11, -20},
+                                                  {0x5, 1, 11, 2, -9},
                                               }},
         {32, {2, 11, 12, 20, 21, 29, 30, 39}, {
-                                                  {0xa0, 2, 5, 7},
-                                                  {0x48, 2, 3, 6},
-                                                  {0x12, 2, 1, 4},
-                                                  {0x5, 2, 0, 2},
+                                                  {0xa0, 1, 32, 29, -3},
+                                                  {0x48, 1, 29, 20, -9},
+                                                  {0x12, 1, 20, 11, -9},
+                                                  {0x5, 1, 11, 2, -9},
                                               }},
     };
     int num_fails = 0;
     for (const auto &tc : test_cases)
     {
-        const auto movegroups = get_tengroups(tc.cards);
-        const auto moves = get_moves_ascending(tc.pile_card, movegroups, tc.cards, 2, 1);
-        if (tc.moves != moves)
+        const auto ten_groups = get_ten_groups(tc.hand);
+        const auto act = get_plays_ascending(tc.pile_card, 1, tc.hand, ten_groups, 2, 1);
+        if (tc.exp != act)
         {
             ++num_fails;
             std::cerr << "FAIL, " << __FUNCTION__
                       << "(pile_card: " << static_cast<int16_t>(tc.pile_card)
-                      << ", cards: " << to_string(tc.cards) << ")\n"
-                      << "- exp moves: " << to_string(tc.moves) << '\n'
-                      << "- act moves: " << to_string(moves) << '\n';
+                      << ", hand: " << to_string(tc.hand) << ")\n"
+                      << "exp: " << to_string(tc.exp) << '\n'
+                      << "act: " << to_string(act) << '\n';
         }
     }
     return num_fails;
 }
 
-// int test_get_turn_score()
-// {
-//     struct TestCase
-//     {
-//         Piles piles;
-//         int num_cards_needed;
-//         int num_cards_played;
-//         int expected;
-//     };
-//     const TestCase test_cases[] = {
-//         {{1, 1, 100, 100}, 2, 0, 396},
-//         {{2, 1, 100, 100}, 2, 0, 395},
-//         {{1, 2, 100, 100}, 2, 0, 395},
-//         {{1, 1, 99, 100}, 2, 0, 395},
-//         {{1, 1, 100, 99}, 2, 0, 395},
-//         {{49, 50, 51, 52}, 2, 0, 395},
-//         {{99, 98, 2, 3}, 2, 0, 202},
-//         {{99, 98, 2, 3}, 2, 1, 106},
-//         {{99, 98, 2, 3}, 2, 2, 206},
-//         {{99, 98, 2, 3}, 2, 3, 206},
-//         {{99, 98, 2, 3}, 1, 0, 6},
-//         {{99, 98, 2, 3}, 1, 1, 106},
-//         {{99, 98, 2, 3}, 1, 2, 106},
-//     };
-//     int num_fails = 0;
-//     for (const auto &tc : test_cases)
-//     {
-//         const auto actual = get_turn_score(tc.piles, tc.num_cards_needed, tc.num_cards_played);
-//         if (tc.expected != actual)
-//         {
-//             ++num_fails;
-//             std::cerr << "FAIL, " << __FUNCTION__
-//                       << "(piles: " << to_string(tc.piles)
-//                       << ", num_cards_needed: " << tc.num_cards_needed
-//                       << ", num_cards_played: " << tc.num_cards_played << ")"
-//                       << ", exp: " << tc.expected
-//                       << ", act: " << actual << "\n";
-//         }
-//     }
-//     return num_fails;
-// }
-
-int test_turn_compare()
+int test_is_turn2_better()
 {
-    // TODO Turn::operator<
+    struct TestCase
+    {
+        Turn t1;
+        Turn t2;
+        int min_cards_for_turn;
+        int card_reach_distance;
+        bool expected;
+    };
+    const TestCase test_cases[] = {
+        // 1. One has min cards, the other doesn't
+        {
+            {{1, 1, 100, 90}, 0x1},
+            {{1, 1, 100, 100}, 0x3},
+            2,
+            1,
+            true,
+        },
+        {
+            {{1, 1, 100, 100}, 0x3},
+            {{1, 1, 100, 90}, 0x1},
+            2,
+            1,
+            false,
+        },
+        // 2. points/card played
+        {
+            {{1, 1, 100, 100}, 0x3},
+            {{4, 1, 100, 100}, 0x7},
+            2,
+            1,
+            false,
+        },
+        {
+            {{1, 1, 100, 100}, 0x3},
+            {{1, 2, 100, 100}, 0x7},
+            2,
+            1,
+            true,
+        },
+        // 3. turn with more cards
+        {
+            {{1, 3, 100, 100}, 0x7},
+            {{1, 1, 100, 100}, 0x3},
+            2,
+            1,
+            false,
+        },
+        // 4. keep extremes intact
+        {
+            {{5, 10, 98, 100}, 0x7},
+            {{7, 10, 100, 100}, 0x7},
+            2,
+            1,
+            false,
+        },
+        {
+            {{7, 10, 100, 100}, 0x7},
+            {{5, 10, 98, 100}, 0x7},
+            2,
+            1,
+            true,
+        },
+        // 5. Tiebreaker fall-thru
+        {
+            {{1, 1, 98, 100}, 0x7},
+            {{1, 3, 100, 100}, 0x7},
+            2,
+            1,
+            false,
+        },
+        {
+            {{5, 10, 90, 98}, 0x7},
+            {{7, 10, 90, 100}, 0x7},
+            2,
+            1,
+            false,
+        },
+    };
+    int num_fails = 0;
+    for (const auto &tc : test_cases)
+    {
+        const auto actual = is_turn2_better(tc.t1, tc.t2, tc.min_cards_for_turn, tc.card_reach_distance);
+        if (tc.expected != actual)
+        {
+            ++num_fails;
+            std::cerr << "FAIL, " << __FUNCTION__
+                      << "(t1: " << to_string(tc.t1)
+                      << ",t2: " << to_string(tc.t2)
+                      << ", min_cards: " << tc.min_cards_for_turn
+                      << ", crd: " << tc.card_reach_distance << ")"
+                      << ", exp: " << tc.expected
+                      << ", act: " << actual << "\n";
+        }
+    }
+    return num_fails;
 }
 
 int main()
@@ -291,7 +343,9 @@ int main()
     int num_fails = test_flip_hand() +
                     test_flip_hand_mask() +
                     test_get_num_cards_in_hand_mask() +
-                    test_get_ten_groups();
+                    test_get_ten_groups() +
+                    test_get_plays_ascending_2_cards_1_over() +
+                    test_is_turn2_better();
 
     return num_fails != 0;
 }

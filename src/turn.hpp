@@ -79,20 +79,6 @@ namespace TheGameAnalyzer
     using Piles = std::array<Card, 4>;
     std::string to_string(const Piles &);
 
-    // The outcome of a player turn.
-    struct Turn
-    {
-        Turn() = default;
-        explicit Turn(const Piles &piles_) : piles(piles_)
-        {
-        }
-        Piles piles{1, 1, 100, 100};
-        HandMask hand_mask{0};
-    };
-
-    // Used for finding the best turn. (Lower is better.)
-    constexpr bool operator<(const Turn &t1, const Turn &t2);
-
     // Find moves for this pile.
     //
     // Finds for an ascending pile. For descending piles, flip them first.
@@ -106,6 +92,18 @@ namespace TheGameAnalyzer
     Plays get_plays_ascending(Card pile_card, size_t piles_index, const Hand &hand,
                               const TenGroups &ten_groups,
                               int min_cards_for_turn, int card_reach_distance);
+
+    // The outcome of a player turn.
+    struct Turn
+    {
+        Piles piles{1, 1, 100, 100};
+        HandMask hand_mask{0};
+    };
+    std::string to_string(const Turn &);
+
+    // Is the second turn better?
+    // \return true if t2 is better than t1.
+    bool is_turn2_better(const Turn &t1, const Turn &t2, int min_cards_for_turn, int card_reach_distance);
 
     // Find the best turn for a given set of piles and hand.
     // \param pile_card Top card of pile in consideration.
