@@ -1,3 +1,5 @@
+#pragma once
+
 #include <cstdint>
 #include <vector>
 
@@ -10,6 +12,8 @@ namespace TheGameAnalyzer
         double cards_left_average = 0.0f;    // Average number of cards remaining.
         double cards_left_stddev = 0.0f;     // Standard deviation of cards remaining.
     };
+
+    std::string to_string(const TheGamesResults &the_games_results);
 
     const int MIN_TRIALS = 1;
     const int MAX_TRIALS = 10'000;
@@ -30,4 +34,4 @@ namespace TheGameAnalyzer
     //
     // \param the_games_results Object to print.
     void print_the_games_results(const TheGamesResults &the_games_results);
-}
+} // namespace TheGameAnalyzer

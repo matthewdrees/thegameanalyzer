@@ -2,6 +2,8 @@
 
 #include "games.hpp"
 
+#include <iostream>
+
 int main(int argc, char *argv[])
 {
     cxxopts::Options options("thegameanalyzer", "Play 'The Game' several times and give some stats.");
@@ -19,11 +21,17 @@ int main(int argc, char *argv[])
         std::cout << options.help() << std::endl;
         return 0;
     }
-    // TODO
     // No bounds checking, just assert.
-    // const auto the_games_results = TheGameAnalyzer::play_games(num_players, int card_reach_distance, int card_reach_distance_endgame,
-    //                            int num_trials, bool do_parallel);
-    // if num_trials is > 1, print the_game_results
+    const auto the_games_results = TheGameAnalyzer::play_games(result["num-players"].as<int>,
+                                                               result["card-reach-distance"].as<int>,
+                                                               result["card-reach-distance-endgame"].as<int>,
+                                                               result["num-trials"].as<int>,
+                                                               result["parallel"].as<bool>);
+
+    if (num_trials > 1)
+    {
+        std::cout << to_string(the_games_results) << "\n";
+    }
 
     return 0;
 }

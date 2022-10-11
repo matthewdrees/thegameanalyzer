@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <iostream>
 #include <numeric>
 #include <random>
 
@@ -41,92 +42,88 @@ namespace TheGameAnalyzer
         deck.erase(deck_it, deck.end());
     }
 
-    enum class PrintGame
+    size_t get_strongest_starting_hands_index(const Piles &piles, const std::vector<Hand> &hands,
+                                              int card_reach_distance)
     {
-        No,
-        Yes
-    };
+        std::vector<Turn> turns(hands.size());
+        std::transform(hands.begin(), hands.end(), turns.begin(), [&](const auto &h)
+                       { return find_best_turn(piles, h, 2, card_reach_distance); });
+        const auto max_turn_it = std::max_element(turns.begin(), turns.end());
+        return static_cast<size_t>(max_turn_it - turns.begin());
+    }
 
-    struct GameSettings
+    int play_game(uint32_t seed, int num_players, int card_reach_distance_normal,
+                  int card_reach_distance_endgame, PrintGame print_game)
     {
-        size_t num_players{1};
-        int starting_min_num_cards{2};
-        int extra_card_distance{1};
-        int extra_card_distance_end_game{1};
-        PrintGame print_game{PrintGame::No};
-    };
-    struct GameState
-    {
-        GameState(unsigned seed, size_t num_players);
+        assert(num_players >= MIN_PLAYERS);
+        assert(num_players <= MAX_PLAYERS);
+        assert(card_reach_distance_normal >= MIN_CARD_REACH_DISTANCE);
+        assert(card_reach_distance_normal <= MAX_CARD_REACH_DISTANCE);
+        assert(card_reach_distance_endgame >= MIN_CARD_REACH_DISTANCE);
+        assert(card_reach_distance_endgame <= MAX_CARD_REACH_DISTANCE);
 
         Piles piles = {1, 1, 100, 100};
         std::vector<Hand> hands;
         std::vector<Card> deck;
         int num_cards_in_game{98};
-    };
 
-    size_t get_strongest_starting_hands_index(const TheGameAnalyzer::GameState &gs, int extra_card_distance)
-    {
-        std::vector<Turn> turns(gs.hands.size());
-        std::transform(gs.hands.begin(), gs.hands.end(), turns.begin(), [&](const auto &h)
-                       { return find_best_turn(gs.piles, h, 2, game_settings.extra_card_distance); });
-        const auto max_turn_it = std::max_element(turns.begin(), turns.end());
-        return static_cast<size_t>(max_turn_it - turns.begin());
-    }
-
-    GameState::GameState(unsigned seed, size_t num_players) : hands(num_players),
-                                                              deck(98)
-    {
         // Generate and shuffle the deck.
         std::iota(deck.begin(), deck.end(), 2);
         std::mt19937 gen32(seed);
         std::shuffle(deck.begin(), deck.end(), gen32);
 
-        const auto num_cards_per_hand = calc_num_cards_per_hand(num_players);
-
         // Deal the hands.
+        const auto num_cards_per_hand = calc_num_cards_per_hand(num_players);
         for (auto &hand : hands)
         {
-            draw_cards(deck, hand, num_cards_per_hand);
+            hand.resize(num_cards_per_hand);
+            std::copy(deck.end() - num_cards_per_hand, deck.end(), hand.begin());
+            deck.erase(deck.end() - num_cards_per_hand, deck.end());
         }
-    }
 
-    GameState play_game(unsigned seed, const GameSettings &game_settings)
-    {
-        GameState gs(seed, game_settings.num_players);
-        auto hands_index = get_strongest_starting_hands_index(gs, game_settings.extra_card_distance);
-        while (gs.num_cards_in_game > 0)
+        if (print_game == PrintGame::Yes)
         {
-            auto &hand = gs.hands[hands_index];
+            std::cout << "seed: " << seed << ", deck: " to_string(deck) << "\n";
+            for (size_t i = 0; i < hands.size(); ++i)
+            {
+                std::cout << "hand " << i < < < ": " << to_string(hand) << "\n";
+            }
+        }
+
+        // Get the strongest starting hand
+        auto hands_index = get_strongest_starting_hands_index(piles, hands, card_reach_distance_normal);
+
+        // Play the game.
+        while (num_cards_in_game > 0)
+        {
+            auto &hand = hands[hands_index];
             if (hand.empty())
             {
                 continue;
             }
-            const int min_num_cards = gs.deck.empty() ? 1 : game_settings.starting_min_num_cards;
-            const int extra_card_distance = gs.deck.empty() ? game_settings.extra_card_distance_end_game : game_settings.extra_card_distance;
-            const auto turn = find_best_turn(gs.piles, hand, min_num_cards, extra_card_distance);
-            if (game_settings.print_game == PrintGame::Yes)
+            const int min_cards_for_turn = deck.empty() ? 1 : 2;
+            const int card_reach_distance = deck.empty() ? card_reach_distance_endgame : card_reach_distance_normal;
+            const auto turn = find_best_turn(piles, hand, min_cards_for_turn, card_reach_distance);
+            if (print_game == PrintGame::Yes)
             {
+                std::cout << to_string(piles) << ", hand " << hand_index << ", "
+                          << to_string(hand) << ", 0x" << std::hex << turn.hand_mask
+                          << "\n";
             }
-            gs.num_cards_in_game -= turn.num_cards_played;
-            if (turn.num_cards_needed > 0)
+            const auto num_cards_played = get_num_cards_in_hand_mask(turn.hand_mask);
+            num_cards_in_game -= num_cards_played;
+            if (num_cards_played < min_cards_for_turn)
             {
                 break;
             }
-            draw_cards(gs.deck, hand, turn.hand_mask);
-
+            piles = turn.piles;
+            draw_cards(deck, hand, turn.hand_mask);
             ++hands_index;
-            if (hands_index == gs.hands.size())
+            if (hands_index == hands.size())
             {
                 hands_index = 0;
             }
         }
-
-        return gs;
-    }
-
-    int play_game(uint32_t seed, int num_players, int card_reach_distance,
-                  int card_reach_distance_endgame, bool do_print_game)
-    {
+        return num_cards_in_game;
     }
 } // namespace TheGameAnalyzer

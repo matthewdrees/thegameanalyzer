@@ -84,13 +84,14 @@ namespace TheGameAnalyzer
     // Finds for an ascending pile. For descending piles, flip them first.
     //
     // \param pile_card Top card of pile in consideration.
+    // \param max_card Don't consider cards >= max_card for plays.
     // \param piles_index Index of pile.
     // \param ten_groups Collection of ten_groups in the hand.
     // \param min_cards_for_turn Minimum cards to be played for this turn.
     // \param card_reach_distance Amount to "reach" to play another card.
     // \return Possible plays for this pile.
-    Plays get_plays_ascending(Card pile_card, size_t piles_index, const Hand &hand,
-                              const TenGroups &ten_groups,
+    Plays get_plays_ascending(Card pile_card, Card max_card, size_t piles_index,
+                              const Hand &hand, const TenGroups &ten_groups,
                               int min_cards_for_turn, int card_reach_distance);
 
     // The outcome of a player turn.

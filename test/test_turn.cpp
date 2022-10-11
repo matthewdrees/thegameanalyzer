@@ -340,12 +340,12 @@ int test_is_turn2_better()
 
 int main()
 {
-    int num_fails = test_flip_hand() +
-                    test_flip_hand_mask() +
-                    test_get_num_cards_in_hand_mask() +
-                    test_get_ten_groups() +
-                    test_get_plays_ascending_2_cards_1_over() +
-                    test_is_turn2_better();
+    const int num_fails = test_flip_hand() +
+                          test_flip_hand_mask() +
+                          test_get_num_cards_in_hand_mask() +
+                          test_get_ten_groups() +
+                          test_get_plays_ascending_2_cards_1_over() +
+                          test_is_turn2_better();
 
     return num_fails != 0;
 }

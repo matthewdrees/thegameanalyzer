@@ -22,7 +22,7 @@ With a basic strategy, how likely is that you have an excellent result (< 10 car
 
 * Play the minimum cards that result with the lowest change. (Except see the notes about _reaching_.)
 * Tiebreaker goes to the bigger pile (e.g. if deciding between two _up_ piles, play on the higher number to leave room on the lower number pile).
-* No communication between players. Per the rules, players can communicate by saying things like "Don't place on the last pile", or "Don't make a big jump on this pile", but I didn't model this.
+* No communication between players except for determining the strongest starting hand. Per the rules, players can communicate by saying things like "Don't place on the last pile", or "Don't make a big jump on this pile", but I didn't model this.
 * No memory of what cards have been played.
 * Reaching: If you play the minimum number of cards and have an extra card that is 1 more, it seems wise to play it. But how high do you reach to play the next card? Don't know, so modelled it with a "# reach". E.g. 0 means don't reach at all, 3 means reach for cards that are up to 3 higher, etc.
 * Reaching in the endgame: When the draw pile is empty players only have to play 1 card. I call this phase the endgame. It seems like you should be able to reach further in the endgame, so I modelled it with "# reach (endgame)".

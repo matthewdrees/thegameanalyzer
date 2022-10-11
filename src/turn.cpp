@@ -209,7 +209,7 @@ namespace TheGameAnalyzer
         return s;
     }
 
-    Plays get_plays_ascending(Card pile_card, size_t piles_index, const Hand &hand,
+    Plays get_plays_ascending(Card pile_card, Card max_card, size_t piles_index, const Hand &hand,
                               const TenGroups &ten_groups, int min_cards_for_turn,
                               int card_reach_distance)
     {
@@ -250,6 +250,10 @@ namespace TheGameAnalyzer
 
         for (; i < hand.size(); ++i)
         {
+            if (max_card >= hand[i])
+            {
+                break;
+            }
             const unsigned card_mask = 1 << i;
 
             // Skip cards that are already in a play.
@@ -366,7 +370,10 @@ namespace TheGameAnalyzer
         return false;
     }
 
-    static void get_plays_helper(std::vector<Plays> &vec_of_plays, const Piles &piles, size_t piles_index, Card max_card, const Hand &hand, const TenGroups &ten_groups, int min_cards_for_turn, int card_reach_distance)
+    static void get_plays_helper(std::vector<Plays> &vec_of_plays, const Piles &piles,
+                                 size_t piles_index, Card max_card, const Hand &hand,
+                                 const TenGroups &ten_groups, int min_cards_for_turn,
+                                 int card_reach_distance)
     {
         auto plays = get_plays_ascending(piles[piles_index], max_card, hand, ten_groups, min_cards_for_turn, card_reach_distance);
         if (!plays.empty())
@@ -417,13 +424,32 @@ namespace TheGameAnalyzer
         return vec_of_plays;
     }
 
-    struct BestPlayCalculator
+    struct BestTurnCalculator
     {
+        BestTurnCalculator(const Hand &hand_, Turn &best_turn_, Plays &&plays_,
+                           int min_cards_for_turn_,
+                           int card_reach_distance_) : hand(hand_), best_turn(best_turn_),
+                                                       plays(plays_),
+                                                       min_cards_for_turn(min_cards_for_turn_),
+                                                       card_reach_distance(card_reach_distance_)
+        {
+            HandMask hm = {0};
+            for (const auto p : plays)
+            {
+                HandMask possible_conflict = p.hand_mask & hm;
+                if (possible_conflict != 0)
+                {
+                    conflict_mask |= possible_conflict;
+                }
+                hm |= p.hand_mask;
+            }
+        }
         Hand hand;
-        Turn best_turn;
+        Turn &best_turn;
         Plays plays;
         int min_cards_for_turn = 2;
         int card_reach_distance = 1;
+        HandMask conflict_mask = 0;
 
         void recurse(const Turn &cur_turn, size_t plays_index);
     };
@@ -431,35 +457,61 @@ namespace TheGameAnalyzer
     Turn find_best_turn(const Piles &piles, const Hand &hand, int min_cards_for_turn, int card_reach_distance)
     {
         const auto vec_of_plays = get_vec_of_plays(piles, hand, min_cards_for_turn, card_reach_distance);
-        std::array<size_t, 4> plays_indexes = {0};
 
         Turn best_turn;
         for (size_t i = 0; i < vec_of_plays.size(); ++i)
         {
             Plays plays;
-            plays.push_back(vec_of_plays[i][plays_indexes[i]++]);
-
-            LEFT OFF HERE(unfortunately)
-
-                for (size_t j = 0; j < vec_of_plays.size();)
+            HandMask hand_mask = 0;
+            std::array<size_t, 4> plays_indexes = {0};
             {
+                // Force the top of each pile once.
+                const Play &p = vec_of_plays[j][plays_indexes[i]++];
+                hand_mask |= p.hand_mask;
+                plays.push_back(p);
+            }
+            // Find all next possible moves
+            while (true)
+            {
+                // Find the next best move.
+                std::optional<Play> next_best_play;
+                for (size_t j = 0; j < vec_of_plays.size(); ++j)
+                {
+                    size_t &idx = plays_indexes[j];
+                    if (idx < vec_of_plays[j].size())
+                    {
+                        const Play &p = vec_of_plays[j][idx];
+                        if (!next_best_play || next_best_play->delta > p.delta)
+                        {
+                            next_best_play = p;
+                            ++idx;
+                        }
+                    }
+                }
+                if (next_best_play)
+                {
+                    if ((get_num_cards_in_hand_mask(hand_mask) >= min_cards_for_turn) &&
+                        (next_best_play->delta > card_reach_distance))
+                    {
+                        break;
+                    }
+                    hand_mask |= next_best_play->hand_mask;
+                    plays.push_back(*next_best_play);
+                }
+                else
+                {
+                    break;
+                }
+
+                BestTurnCalculator btc{hand,
+                                       best_turn,
+                                       std::move(plays),
+                                       min_cards_for_turn,
+                                       card_reach_distance};
+                btc.recurse(best_turn, 0);
             }
         }
-        BestPlayCalculator bpc;
-        bpc.best_turn.piles = piles;
-        bpc.min_cards_for_turn = min_cards_for_turn;
-        bpc.card_reach_distance = card_reach_distance;
-
-        if (hand.empty())
-        {
-            return bpc.best_turn;
-        }
-
-        Turn cur_turn(piles);
-        cur_turn.num_cards_needed = min_cards_for_turn;
-        bpc.recurse(0, cur_turn);
-
-        return bpc.best_turn;
+        return best_turn;
     }
 
     bool pile_index_is_ascending_pile(size_t pile_index)
@@ -467,60 +519,29 @@ namespace TheGameAnalyzer
         return pile_index < 2;
     }
 
-    bool Turn::do_move(const Play &move, size_t pile_index, const Hand &hand, int card_reach_distance)
+    void BestTurnCalculator::recurse(const Turn &cur_turn, size_t plays_index)
     {
-        if ((move.hand_mask & hand_mask) != 0)
+        if (plays_index >= plays.size())
         {
-            return false;
+            return;
         }
-        hand_mask |= move.hand_mask;
-        if (pile_index_is_ascending_pile(pile_index))
+        const Play &p = plays[plays_index];
+        if (cur_turn.piles[p.piles_index] == p.pile_card_start &&
+            (cur_turn.hand_mask & p.hand_mask) == 0)
         {
-            piles_sum += piles[pile_index] - hand[move.lo];
-            piles[pile_index] = hand[move.lo];
-        }
-        else
-        {
-            piles_sum += piles[pile_index] - hand[move.hi];
-            piles[pile_index] = hand[move.hi];
-        }
-        if (num_cards_needed == 0)
-        {
-            extra_play_points += card_reach_distance;
-        }
-        else
-        {
-            num_cards_needed -= move.num_cards;
-            num_cards_needed = std::max(0, num_cards_needed);
-        }
-        return true;
-    }
-
-    void BestPlayCalculator::recurse(size_t piles_index, const Turn &cur_turn)
-    {
-        for (size_t i = piles_index; i < cur_turn.piles.size(); ++i)
-        {
-            const size_t mi = moves_indexes[i];
-            const Moves &moves = pile_moves[i];
-            if (mi < moves.size())
+            Turn next_turn{cur_turn};
+            next_turn.piles[p.piles_index] = p.pile_card_end;
+            next_turn.hand_mask |= p.hand_mask;
+            if (is_turn2_better(best_turn, next_turn, min_cards_for_turn, card_reach_distance))
             {
-                Turn next_turn = cur_turn;
-                if (next_turn.do_move(moves[mi], i, hand, card_reach_distance))
-                {
-                    if (cur_turn.num_cards_needed == 0 &&
-                        next_turn < best_turn)
-                    {
-                        continue;
-                    }
-                    if (best_turn < cur_turn)
-                    {
-                        best_turn = cur_turn;
-                    }
-                    ++moves_indexes[i];
-                    recurse(i, next_turn);
-                    --moves_indexes[i];
-                }
+                best_turn = next_turn;
+            }
+            recurse(next_turn, plays_index + 1);
+            if ((p.hand_mask & conflict_mask) == 0)
+            {
+                return;
             }
         }
+        recurse(cur_turn, plays_index + 1);
     }
 } // namespace TheGameAnalyzer

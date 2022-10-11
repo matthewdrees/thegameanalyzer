@@ -1,28 +1,56 @@
 #include "games.hpp"
+#include "game.hpp"
 
+#include <algorithm>
+#include <cassert>
 #include <cmath>
+#include <execution>
+#include <numeric>
+#include <vector>
 
 namespace TheGameAnalyzer
 {
-    TheGamesResults calculate_games_stats(const std::vector<int> &)
-    {
-        // const double average = static_cast<double>(std::accumulate(...)) / card_remaining_vec.size();
 
-        // std::count_if
-        // double stddev =
-        // std::sqrt()
-        // std::accumulate
-        // for i in card_remaining_vec:
-        //     running_sum_square += std::pow(static_cast<double>(i)-average, 2)
-        // divided by card_remaining_vec.size()
+    std::string to_string(const TheGamesResults &tgr)
+    {
+        std::ostringstream oss;
+        oss << "{ excellent_percent: " << tgr.excellent_percent
+            << ", beat_the_game_percent: " << tgr.beat_the_game_percent
+            << ", cards_left_average: " << tgr.cards_left_average
+            << ", cards_left_stddev: " << tgr.cards_left_stddev
+            << "}" return oss.str();
     }
 
-    TheGamesResults play_games(int num_players, int card_reach_distance, int card_reach_distance_endgame,
+    TheGamesResults calculate_games_stats(const std::vector<int> &num_cards_played)
+    {
+        assert(num_cards_played.size() > 0);
+        TheGamesResults results;
+        const double num_games = static_cast<double>(num_cards_played.size());
+        results.excellent_percent = std::count_if(num_cards_played.begin(), num_cards_played.end(), [](auto i)
+                                                  { return i == 0; }) /
+                                    num_games * 100.0;
+        results.beat_the_game_percent = std::count_if(num_cards_played.begin(), num_cards_played.end(), [](auto i)
+                                                      { return i < 10; }) /
+                                        num_games * 100.0;
+        results.cards_left_average = std::accumulate(num_cards_played.begin(), num_cards_played.end(), 0) / num_games;
+        results.cards_left_stddev = std::sqrt(std::accumulate(num_cards_played.begin(), num_cards_played.end(), 0.0, [=](double d, int i)
+                                                              { return std::pow(static_cast<double>(i) - average, 2); }) /
+                                              num_games);
+        return results;
+    }
+
+    TheGamesResults play_games(int num_players, int card_reach_distance_normal, int card_reach_distance_endgame,
                                int num_trials, bool do_parallel)
     {
-        // Use std::vector<size_t> for seeds.
-        // std::vector<int> for play_game return
-        // std::transform with std::seq or std::par_unseq
-        // do_print_game is true if num_trials == 1
+        assert(num_trials >= MIN_TRIALS);
+        assert(num_trials <= MAX_TRIALS);
+        std::vector<size_t> seeds(num_trials);
+        std::iota(seeds.begin(), seeds.end(), 0);
+        std::vector<int> num_cards_played(num_trials);
+        const auto execution_policy = do_parallel ? std::execution::par : std::execution::seq;
+        const auto print_game = num_trials == 1 ? PrintGame::Yes : PrintGame::No;
+        std::transform(execution_policy, seeds.begin(), seeds.end(), num_cards_played.begin(), [=](auto seed)
+                       { return play_game(seed, num_players, card_reach_distance_normal, card_reach_distance_endgame, print_game); });
+        return calculate_game_stats(num_cards_played);
     }
-}
+} // namespace TheGameAnalyzer
