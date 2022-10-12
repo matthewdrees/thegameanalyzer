@@ -1,7 +1,7 @@
 #pragma once
 
 #include <array>
-#include <utility>
+#include <string>
 #include <vector>
 
 namespace TheGameAnalyzer
@@ -11,7 +11,7 @@ namespace TheGameAnalyzer
 
     using Hand = std::vector<Card>;
 
-    void to_string(const Hand &hand);
+    std::string to_string(const Hand &hand);
 
     // Flip the cards and reverse the order.
     void flip_hand(Hand &hand);
@@ -34,8 +34,8 @@ namespace TheGameAnalyzer
         Card pile_card_end{0};
         int delta{0};
     };
-    bool operator==(const Play &m1, const Play &m2);
-    bool operator!=(const Play &m1, const Play &m2);
+    bool operator==(const Play &p1, const Play &p2);
+    bool operator!=(const Play &p1, const Play &p2);
     std::string to_string(const Play &);
 
     // Flip the play.
@@ -51,8 +51,8 @@ namespace TheGameAnalyzer
     // [ 5, 10, 20, 30, 40], indexes would be 1, 4).
     struct TenGroup
     {
-        size_t lo{0}; // low hand index.
-        size_t hi{0}; // high hand index.
+        size_t lo{0}; // hand index for first of ten group.
+        size_t hi{0}; // hand index for last of ten group.
         HandMask hand_mask{0};
     };
     bool operator==(const TenGroup &tg1, const TenGroup &tg2);
@@ -63,7 +63,7 @@ namespace TheGameAnalyzer
     struct TenGroups
     {
         std::vector<TenGroup> groups;
-        HandMask groups_hand_mask = 0;
+        HandMask groups_hand_mask{0};
         const TenGroup &operator[](size_t idx) const { return groups[idx]; };
         void push_back(TenGroup &tg) { groups.push_back(tg); };
         std::vector<TenGroup>::const_iterator begin() const { return groups.begin(); };
@@ -79,13 +79,13 @@ namespace TheGameAnalyzer
     using Piles = std::array<Card, 4>;
     std::string to_string(const Piles &);
 
-    // Find moves for this pile.
+    // Find plays for this pile.
     //
     // Finds for an ascending pile. For descending piles, flip them first.
     //
     // \param pile_card Top card of pile in consideration.
     // \param max_card Don't consider cards >= max_card for plays.
-    // \param piles_index Index of pile.
+    // \param piles_index Index of piles.
     // \param ten_groups Collection of ten_groups in the hand.
     // \param min_cards_for_turn Minimum cards to be played for this turn.
     // \param card_reach_distance Amount to "reach" to play another card.
@@ -98,17 +98,22 @@ namespace TheGameAnalyzer
     struct Turn
     {
         Piles piles{1, 1, 100, 100};
-        HandMask hand_mask{0};
+        HandMask hand_mask{0}; // Mask of cards played from hand.
     };
     std::string to_string(const Turn &);
 
-    // Is the second turn better?
-    // \return true if t2 is better than t1.
-    bool is_turn2_better(const Turn &t1, const Turn &t2, int min_cards_for_turn, int card_reach_distance);
+    struct TurnCompare
+    {
+        int min_cards_for_turn;
+        int card_reach_distance;
+        // \return true if t2 is better than t1.
+        bool operator()(const Turn &t1, const Turn &t2) const;
+    };
 
     // Find the best turn for a given set of piles and hand.
-    // \param pile_card Top card of pile in consideration.
-    // \param ten_groups Collection of ten_groups in the hand.
+    //
+    // \param piles Game piles.
+    // \param hand Hand.
     // \param min_cards_for_turn Minimum cards to be played for this turn.
     // \param card_reach_distance Amount to "reach" to play another card.
     Turn find_best_turn(const Piles &, Hand &, int min_cards_for_turn,

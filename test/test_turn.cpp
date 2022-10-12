@@ -153,35 +153,6 @@ int test_get_ten_groups()
     return num_fails;
 }
 
-int test_do_best_turn_2_cards_1_over()
-{
-    struct TestCase
-    {
-        Piles piles;
-        std::vector<Card> hand;
-        Piles exp_piles;
-        std::vector<Card> exp_cards;
-    };
-
-    TestCase test_cases[] = {
-        {{1, 1, 100, 100}, {8, 13, 26, 43, 51, 56, 63, 81}, {13, 1, 100, 100}, {26, 43, 51, 56, 63, 81}},
-        {{13, 1, 1, 1}, {26, 43, 51, 56, 61, 63, 73, 81}, {13, 1, 73, 100}, {26, 43, 51, 56, 61}},
-        {{13, 1, 73, 100}, {14, 22, 24, 26, 43, 51, 56, 61}, {14, 1, 73, 100}, {26, 43, 51, 56, 61}},
-        {{14, 1, 73, 100}, {21, 26, 37, 43, 51, 56, 61}, {26, 1, 73, 100}, {37, 41, 43, 51, 56, 61}},
-        {{26, 1, 73, 100}, {37, 41, 43, 51, 56, 61, 65, 66}, {26, 1, 65, 100}, {37, 41, 43, 51, 56, 61}},
-        {{26, 1, 65, 100}, {3, 17, 37, 41, 43, 51, 56, 61}, {26, 1, 61, 100}, {3, 17, 37}}, // interesting.
-        {{26, 1, 61, 100}, {3, 15, 17, 31, 37, 58, 70, 99}, {26, 3, 61, 99}, {15, 17, 31, 37, 58, 70}},
-        {{26, 3, 61, 99}, {15, 17, 31, 37, 58, 70}, {31, 3, 61, 99}, {15, 17, 37, 58, 70, 75}},
-    };
-
-    int num_fails = 0;
-    // for (const auto &tc : test_cases)
-    {
-        // Turn do_best_turn(tc.piles, tc.hand)
-    }
-    return num_fails;
-}
-
 int test_get_plays_ascending_2_cards_1_over()
 {
     struct TestCase
@@ -239,7 +210,7 @@ int test_get_plays_ascending_2_cards_1_over()
     return num_fails;
 }
 
-int test_is_turn2_better()
+int test_turn_compare()
 {
     struct TestCase
     {
@@ -322,7 +293,8 @@ int test_is_turn2_better()
     int num_fails = 0;
     for (const auto &tc : test_cases)
     {
-        const auto actual = is_turn2_better(tc.t1, tc.t2, tc.min_cards_for_turn, tc.card_reach_distance);
+        const TurnCompare turn_compare{tc.min_cards_for_turn, tc.card_reach_distance};
+        const auto actual = turn_compare(tc.t1, tc.t2);
         if (tc.expected != actual)
         {
             ++num_fails;
@@ -345,7 +317,7 @@ int main()
                           test_get_num_cards_in_hand_mask() +
                           test_get_ten_groups() +
                           test_get_plays_ascending_2_cards_1_over() +
-                          test_is_turn2_better();
+                          test_turn_compare();
 
     return num_fails != 0;
 }

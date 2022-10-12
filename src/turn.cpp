@@ -4,7 +4,6 @@
 #include <array>
 #include <cassert>
 #include <cmath>
-#include <iterator>
 #include <sstream>
 #include <vector>
 
@@ -62,17 +61,17 @@ namespace TheGameAnalyzer
         return oss.str();
     }
 
-    bool operator==(const Play &m1, const Play &m2)
+    bool operator==(const Play &p1, const Play &p2)
     {
-        return m1.hand_mask == m2.hand_mask &&
-               m1.piles_index == m2.piles_index &&
-               m1.pile_card_start == m2.pile_card_start &&
-               m1.pile_card_end == m2.pile_card_end &&
-               m1.delta == m2.delta;
+        return p1.hand_mask == p2.hand_mask &&
+               p1.piles_index == p2.piles_index &&
+               p1.pile_card_start == p2.pile_card_start &&
+               p1.pile_card_end == p2.pile_card_end &&
+               p1.delta == p2.delta;
     }
-    bool operator!=(const Play &m1, const Play &m2)
+    bool operator!=(const Play &p1, const Play &p2)
     {
-        return !(m1 == m2);
+        return !(p1 == p2);
     }
 
     void flip_play(Play &play, size_t hand_size)
@@ -184,7 +183,7 @@ namespace TheGameAnalyzer
                     tg.hi = j;
                 }
             }
-            if (tg.hand_mask != card_mask)
+            if (tg.lo != tg.hi)
             {
                 ten_groups.groups_hand_mask |= tg.hand_mask;
                 ten_groups.push_back(tg);
@@ -195,18 +194,14 @@ namespace TheGameAnalyzer
 
     std::string to_string(const Piles &piles)
     {
-        assert(piles.size() == 4);
-        std::string s;
-        s += "{";
-        s += std::to_string(piles[0]);
-        s += ", ";
-        s += std::to_string(piles[1]);
-        s += ", ";
-        s += std::to_string(piles[2]);
-        s += ", ";
-        s += std::to_string(piles[3]);
-        s += "}";
-        return s;
+        std::ostringstream oss;
+        oss << "{";
+        for (const auto c : piles)
+        {
+            oss << std::to_string(c) << ',';
+        }
+        oss << "\b}"; // \b chomps the last comma.
+        return oss.str();
     }
 
     Plays get_plays_ascending(Card pile_card, Card max_card, size_t piles_index, const Hand &hand,
@@ -217,10 +212,8 @@ namespace TheGameAnalyzer
         HandMask hand_mask = 0;
         Card last_card = pile_card;
         const Card pile_card_minus_10 = pile_card - 10;
-        size_t i = static_cast<size_t>(std::find_if(hand.begin(), hand.end(), [=](const auto c)
-                                                    { return c >= pile_card_minus_10; }) -
-                                       hand.begin());
-        if (i < hand.size() && hand[i] == pile_card_minus_10)
+        size_t i = static_cast<size_t>(std::find(hand.begin(), hand.end(), pile_card_minus_10) - hand.begin());
+        if (i < hand.size())
         {
             Play play;
             play.piles_index = piles_index;
@@ -238,7 +231,7 @@ namespace TheGameAnalyzer
             }
             play.pile_card_end = hand[i];
             hand_mask |= play.hand_mask;
-            plays.push_back(play);
+            plays.push_back(std::move(play));
             last_card = hand[i];
         }
         else
@@ -250,11 +243,11 @@ namespace TheGameAnalyzer
 
         for (; i < hand.size(); ++i)
         {
-            if (max_card >= hand[i])
+            if (max_card <= hand[i])
             {
                 break;
             }
-            const unsigned card_mask = 1 << i;
+            const HandMask card_mask = 1 << i;
 
             // Skip cards that are already in a play.
             if ((card_mask & hand_mask) != 0)
@@ -264,10 +257,10 @@ namespace TheGameAnalyzer
 
             auto group_it = std::find_if(ten_groups.begin(), ten_groups.end(), [=](const auto &g)
                                          { return (g.lo <= i && i <= g.hi) && (hand_mask & g.hand_mask) == 0; });
-            // Bail if we have enough cards and not enough small enough jump to play an extra.
-            const int card_delta = hand[i] - last_card;
             if (get_num_cards_in_hand_mask(hand_mask) >= min_cards_for_turn)
             {
+                // Bail if we have enough cards and not enough small enough jump to play an extra.
+                const int card_delta = hand[i] - last_card;
                 if (card_delta > card_reach_distance)
                 {
                     break;
@@ -293,7 +286,6 @@ namespace TheGameAnalyzer
                         play.hand_mask |= next_card_mask;
                     }
                 }
-                i = group_it->lo;
                 play.hand_mask |= group_it->hand_mask;
                 i = group_it->lo;
             }
@@ -303,7 +295,7 @@ namespace TheGameAnalyzer
             }
             play.pile_card_end = hand[i];
             hand_mask |= play.hand_mask;
-            plays.push_back(play);
+            plays.push_back(std::move(play));
             last_card = hand[i];
         }
         return plays;
@@ -328,7 +320,7 @@ namespace TheGameAnalyzer
         return std::min(piles[0], piles[1]) - std::max(piles[2], piles[3]);
     }
 
-    bool is_turn2_better(const Turn &t1, const Turn &t2, int min_cards_for_turn, int card_reach_distance)
+    bool TurnCompare::operator()(const Turn &t1, const Turn &t2) const
     {
         const int t1_num_cards = get_num_cards_in_hand_mask(t1.hand_mask);
         const int t2_num_cards = get_num_cards_in_hand_mask(t2.hand_mask);
@@ -466,7 +458,7 @@ namespace TheGameAnalyzer
             std::array<size_t, 4> plays_indexes = {0};
             {
                 // Force the top of each pile once.
-                const Play &p = vec_of_plays[j][plays_indexes[i]++];
+                const Play &p = vec_of_plays[i][plays_indexes[i]++];
                 hand_mask |= p.hand_mask;
                 plays.push_back(p);
             }
@@ -481,42 +473,33 @@ namespace TheGameAnalyzer
                     if (idx < vec_of_plays[j].size())
                     {
                         const Play &p = vec_of_plays[j][idx];
-                        if (!next_best_play || next_best_play->delta > p.delta)
+                        if (!next_best_play || p.delta < next_best_play->delta)
                         {
                             next_best_play = p;
                             ++idx;
                         }
                     }
                 }
-                if (next_best_play)
-                {
-                    if ((get_num_cards_in_hand_mask(hand_mask) >= min_cards_for_turn) &&
-                        (next_best_play->delta > card_reach_distance))
-                    {
-                        break;
-                    }
-                    hand_mask |= next_best_play->hand_mask;
-                    plays.push_back(*next_best_play);
-                }
-                else
+                if (!next_best_play)
                 {
                     break;
                 }
-
-                BestTurnCalculator btc{hand,
-                                       best_turn,
-                                       std::move(plays),
-                                       min_cards_for_turn,
-                                       card_reach_distance};
-                btc.recurse(best_turn, 0);
+                if ((get_num_cards_in_hand_mask(hand_mask) >= min_cards_for_turn) &&
+                    (next_best_play->delta > card_reach_distance))
+                {
+                    break;
+                }
+                hand_mask |= next_best_play->hand_mask;
+                plays.push_back(*next_best_play);
             }
+            BestTurnCalculator btc{hand,
+                                   best_turn,
+                                   std::move(plays),
+                                   min_cards_for_turn,
+                                   card_reach_distance};
+            btc.recurse(best_turn, 0);
         }
         return best_turn;
-    }
-
-    bool pile_index_is_ascending_pile(size_t pile_index)
-    {
-        return pile_index < 2;
     }
 
     void BestTurnCalculator::recurse(const Turn &cur_turn, size_t plays_index)
@@ -532,7 +515,8 @@ namespace TheGameAnalyzer
             Turn next_turn{cur_turn};
             next_turn.piles[p.piles_index] = p.pile_card_end;
             next_turn.hand_mask |= p.hand_mask;
-            if (is_turn2_better(best_turn, next_turn, min_cards_for_turn, card_reach_distance))
+            const TurnCompare turn_compare{min_cards_for_turn, card_reach_distance};
+            if (turn_compare(best_turn, next_turn))
             {
                 best_turn = next_turn;
             }

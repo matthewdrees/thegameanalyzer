@@ -1,9 +1,6 @@
 #pragma once
 
-#include "turn.hpp"
-
-#include <array>
-#include <vector>
+#include <cstdint>
 
 namespace TheGameAnalyzer
 {

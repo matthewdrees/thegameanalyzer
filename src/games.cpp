@@ -1,4 +1,5 @@
 #include "games.hpp"
+
 #include "game.hpp"
 
 #include <algorithm>
@@ -6,6 +7,7 @@
 #include <cmath>
 #include <execution>
 #include <numeric>
+#include <sstream>
 #include <vector>
 
 namespace TheGameAnalyzer
@@ -18,7 +20,8 @@ namespace TheGameAnalyzer
             << ", beat_the_game_percent: " << tgr.beat_the_game_percent
             << ", cards_left_average: " << tgr.cards_left_average
             << ", cards_left_stddev: " << tgr.cards_left_stddev
-            << "}" return oss.str();
+            << "}";
+        return oss.str();
     }
 
     TheGamesResults calculate_games_stats(const std::vector<int> &num_cards_played)
@@ -27,10 +30,10 @@ namespace TheGameAnalyzer
         TheGamesResults results;
         const double num_games = static_cast<double>(num_cards_played.size());
         results.excellent_percent = std::count_if(num_cards_played.begin(), num_cards_played.end(), [](auto i)
-                                                  { return i == 0; }) /
+                                                  { return i < 10; }) /
                                     num_games * 100.0;
         results.beat_the_game_percent = std::count_if(num_cards_played.begin(), num_cards_played.end(), [](auto i)
-                                                      { return i < 10; }) /
+                                                      { return i == 0; }) /
                                         num_games * 100.0;
         results.cards_left_average = std::accumulate(num_cards_played.begin(), num_cards_played.end(), 0) / num_games;
         results.cards_left_stddev = std::sqrt(std::accumulate(num_cards_played.begin(), num_cards_played.end(), 0.0, [=](double d, int i)
@@ -44,9 +47,9 @@ namespace TheGameAnalyzer
     {
         assert(num_trials >= MIN_TRIALS);
         assert(num_trials <= MAX_TRIALS);
-        std::vector<size_t> seeds(num_trials);
+        std::vector<size_t> seeds(static_cast<size_t>(num_trials));
         std::iota(seeds.begin(), seeds.end(), 0);
-        std::vector<int> num_cards_played(num_trials);
+        std::vector<int> num_cards_played(static_cast<size_t>(num_trials));
         const auto execution_policy = do_parallel ? std::execution::par : std::execution::seq;
         const auto print_game = num_trials == 1 ? PrintGame::Yes : PrintGame::No;
         std::transform(execution_policy, seeds.begin(), seeds.end(), num_cards_played.begin(), [=](auto seed)
