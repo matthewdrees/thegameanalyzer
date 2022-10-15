@@ -7,7 +7,7 @@
 namespace TheGameAnalyzer
 {
     using Card = int16_t;
-    void flip_card(Card &c) { c = 99 - c; }
+    inline void flip_card(Card &c) { c = 101 - c; }
 
     using Hand = std::vector<Card>;
 
@@ -17,7 +17,7 @@ namespace TheGameAnalyzer
     void flip_hand(Hand &hand);
 
     // Bit mask for Hand. (Note max of 8 cards in a hand.)
-    using HandMask = uint8_t;
+    using HandMask = uint16_t;
 
     // Flip the bits in a hand.
     void flip_hand_mask(HandMask &hand_mask, size_t hand_size);
@@ -100,6 +100,8 @@ namespace TheGameAnalyzer
         Piles piles{1, 1, 100, 100};
         HandMask hand_mask{0}; // Mask of cards played from hand.
     };
+    bool operator==(const Turn &t1, const Turn &t2);
+    bool operator!=(const Turn &t1, const Turn &t2);
     std::string to_string(const Turn &);
 
     struct TurnCompare
@@ -110,13 +112,38 @@ namespace TheGameAnalyzer
         bool operator()(const Turn &t1, const Turn &t2) const;
     };
 
+    // Resolve best turn from stack of possible plays.
+    class BestTurnCalculator
+    {
+    public:
+        BestTurnCalculator(const Turn &cur_turn, const Plays &plays_,
+                           int min_cards_for_turn_,
+                           int card_reach_distance_) : plays(plays_),
+                                                       min_cards_for_turn(min_cards_for_turn_),
+                                                       card_reach_distance(card_reach_distance_)
+        {
+            recurse(cur_turn, 0);
+        }
+
+        Turn get_best_turn() const { return best_turn; }
+
+    private:
+        const Plays &plays;
+        int min_cards_for_turn;
+        int card_reach_distance;
+        Turn best_turn{{100, 100, 1, 1}, 0};
+        HandMask conflict_mask = 0;
+
+        void recurse(const Turn &cur_turn, size_t plays_index);
+    };
+
     // Find the best turn for a given set of piles and hand.
     //
     // \param piles Game piles.
     // \param hand Hand.
     // \param min_cards_for_turn Minimum cards to be played for this turn.
     // \param card_reach_distance Amount to "reach" to play another card.
-    Turn find_best_turn(const Piles &, Hand &, int min_cards_for_turn,
+    Turn find_best_turn(const Piles &, const Hand &, int min_cards_for_turn,
                         int card_reach_distance);
 
 } // namespace TheGameAnalyzer

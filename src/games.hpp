@@ -1,6 +1,6 @@
 #pragma once
 
-#include <cstdint>
+#include <string>
 #include <vector>
 
 namespace TheGameAnalyzer
@@ -18,6 +18,9 @@ namespace TheGameAnalyzer
     const int MIN_TRIALS = 1;
     const int MAX_TRIALS = 10'000;
 
+    // Calculate results from several games.
+    TheGamesResults calculate_games_stats(const std::vector<int> &num_cards_played);
+
     // Play several trials of the game.
     //
     // \param num_players Number of players in the game (1-5).
@@ -30,8 +33,4 @@ namespace TheGameAnalyzer
     TheGamesResults play_games(int num_players, int card_reach_distance, int card_reach_distance_endgame,
                                int num_trials, bool do_parallel);
 
-    // Print the_games_results to stdout
-    //
-    // \param the_games_results Object to print.
-    void print_the_games_results(const TheGamesResults &the_games_results);
 } // namespace TheGameAnalyzer

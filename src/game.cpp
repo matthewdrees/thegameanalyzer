@@ -4,6 +4,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <functional>
 #include <iostream>
 #include <numeric>
 #include <random>
@@ -27,7 +28,7 @@ static size_t calc_num_cards_per_hand(size_t num_players)
 
 namespace TheGameAnalyzer
 {
-    void draw_cards(std::vector<Card> &deck, Hand &hand, unsigned hand_mask)
+    void draw_cards(std::vector<Card> &deck, Hand &hand, HandMask hand_mask)
     {
         for (size_t i = 0; i < hand.size(); ++i)
         {
@@ -50,7 +51,7 @@ namespace TheGameAnalyzer
                                               int min_cards_for_turn, int card_reach_distance)
     {
         std::vector<Turn> turns(hands.size());
-        std::transform(hands.begin(), hands.end(), turns.begin(), [&](const auto &h)
+        std::transform(hands.begin(), hands.end(), turns.begin(), [=, piles = std::cref(piles)](const auto &h)
                        { return find_best_turn(piles, h, min_cards_for_turn, card_reach_distance); });
         const TurnCompare turn_compare{min_cards_for_turn, card_reach_distance};
         const auto max_turn_it = std::max_element(turns.begin(), turns.end(), turn_compare);
@@ -68,7 +69,7 @@ namespace TheGameAnalyzer
         assert(card_reach_distance_endgame <= MAX_CARD_REACH_DISTANCE);
 
         Piles piles = {1, 1, 100, 100};
-        std::vector<Hand> hands;
+        std::vector<Hand> hands(static_cast<size_t>(num_players));
 
         // Generate the deck [2 - 99] and shuffle.
         const int NUM_CARDS_IN_DECK = 98;
@@ -84,6 +85,7 @@ namespace TheGameAnalyzer
         {
             hand.resize(num_cards_per_hand);
             std::copy(deck.end() - num_cards_per_hand, deck.end(), hand.begin());
+            std::sort(hand.begin(), hand.end());
             deck.erase(deck.end() - num_cards_per_hand, deck.end());
         }
 
@@ -100,27 +102,26 @@ namespace TheGameAnalyzer
         while (num_cards_in_game > 0)
         {
             auto &hand = hands[hands_index];
-            if (hand.empty())
+            if (!hand.empty())
             {
-                continue;
+                const int min_cards_for_turn = deck.empty() ? 1 : STARTING_MIN_CARDS_PER_TURN;
+                const int card_reach_distance = deck.empty() ? card_reach_distance_endgame : card_reach_distance_normal;
+                const auto turn = find_best_turn(piles, hand, min_cards_for_turn, card_reach_distance);
+                if (print_game == PrintGame::Yes)
+                {
+                    std::cout << to_string(piles) << ", hand: " << hands_index << ", "
+                              << to_string(hand) << ", 0x" << std::hex << turn.hand_mask << std::dec
+                              << "\n";
+                }
+                const auto num_cards_played = get_num_cards_in_hand_mask(turn.hand_mask);
+                num_cards_in_game -= num_cards_played;
+                if (num_cards_played < min_cards_for_turn)
+                {
+                    break;
+                }
+                piles = turn.piles;
+                draw_cards(deck, hand, turn.hand_mask);
             }
-            const int min_cards_for_turn = deck.empty() ? 1 : STARTING_MIN_CARDS_PER_TURN;
-            const int card_reach_distance = deck.empty() ? card_reach_distance_endgame : card_reach_distance_normal;
-            const auto turn = find_best_turn(piles, hand, min_cards_for_turn, card_reach_distance);
-            if (print_game == PrintGame::Yes)
-            {
-                std::cout << to_string(piles) << ", hand: " << hands_index << ", "
-                          << to_string(hand) << ", 0x" << std::hex << turn.hand_mask
-                          << "\n";
-            }
-            const auto num_cards_played = get_num_cards_in_hand_mask(turn.hand_mask);
-            num_cards_in_game -= num_cards_played;
-            if (num_cards_played < min_cards_for_turn)
-            {
-                break;
-            }
-            piles = turn.piles;
-            draw_cards(deck, hand, turn.hand_mask);
             ++hands_index;
             if (hands_index == hands.size())
             {

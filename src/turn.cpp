@@ -11,17 +11,22 @@ namespace TheGameAnalyzer
 {
     std::string to_string(const Hand &hand)
     {
-        if (hand.empty())
-        {
-            return "{}";
-        }
         std::ostringstream oss;
-        oss << '{';
+        oss << "{";
+        bool first = true;
         for (const auto c : hand)
         {
-            oss << static_cast<int16_t>(c) << ',';
+            if (first)
+            {
+                first = false;
+            }
+            else
+            {
+                oss << ",";
+            }
+            oss << static_cast<int16_t>(c);
         }
-        oss << "\b}"; // \b chomps the last comma.
+        oss << "}";
         return oss.str();
     }
 
@@ -53,7 +58,7 @@ namespace TheGameAnalyzer
     std::string to_string(const Play &p)
     {
         std::ostringstream oss;
-        oss << "{hand_mask: 0x" << std::hex << p.hand_mask
+        oss << "{hand_mask: 0x" << std::hex << p.hand_mask << std::dec
             << ", piles_index: " << p.piles_index
             << ", pile_card_start: " << p.pile_card_start
             << ", pile_card_end: " << p.pile_card_end
@@ -85,17 +90,22 @@ namespace TheGameAnalyzer
 
     std::string to_string(const Plays &plays)
     {
-        if (plays.empty())
-        {
-            return "{}";
-        }
         std::ostringstream oss;
-        oss << '{';
+        oss << "{";
+        bool first = true;
         for (const auto &p : plays)
         {
-            oss << to_string(p) << ',';
+            if (first)
+            {
+                first = false;
+            }
+            else
+            {
+                oss << ",";
+            }
+            oss << to_string(p);
         }
-        oss << "\b}"; // \b chomps the last comma.
+        oss << "}";
         return oss.str();
     }
 
@@ -123,7 +133,7 @@ namespace TheGameAnalyzer
         std::ostringstream oss;
         oss << "{lo: " << tg.lo
             << ", hi: " << tg.hi
-            << ", hand_mask: 0x" << std::hex << tg.hand_mask;
+            << ", hand_mask: 0x" << std::hex << tg.hand_mask << std::dec;
         return oss.str();
     }
 
@@ -142,19 +152,20 @@ namespace TheGameAnalyzer
     {
         std::ostringstream oss;
         oss << "{ groups: {";
-        if (ten_groups.groups.empty())
+        bool first = true;
+        for (const auto &g : ten_groups.groups)
         {
-            oss << "}";
-        }
-        else
-        {
-            for (const auto &g : ten_groups.groups)
+            if (first)
             {
-                oss << to_string(g) << ',';
+                first = false;
             }
-            oss << "\b}"; // \b chomps the last comma.
+            else
+            {
+                oss << ",";
+            }
+            oss << to_string(g);
         }
-        oss << ", hand_mask: 0x" << std::hex << ten_groups.groups_hand_mask << "}";
+        oss << "}, hand_mask: 0x" << std::hex << ten_groups.groups_hand_mask << std::dec << "}";
         return oss.str();
     }
 
@@ -196,11 +207,20 @@ namespace TheGameAnalyzer
     {
         std::ostringstream oss;
         oss << "{";
+        bool first = true;
         for (const auto c : piles)
         {
-            oss << std::to_string(c) << ',';
+            if (first)
+            {
+                first = false;
+            }
+            else
+            {
+                oss << ",";
+            }
+            oss << static_cast<int16_t>(c);
         }
-        oss << "\b}"; // \b chomps the last comma.
+        oss << "}";
         return oss.str();
     }
 
@@ -230,6 +250,7 @@ namespace TheGameAnalyzer
                 play.hand_mask = 1 << i; // card mask
             }
             play.pile_card_end = hand[i];
+            play.delta = play.pile_card_end - play.pile_card_start;
             hand_mask |= play.hand_mask;
             plays.push_back(std::move(play));
             last_card = hand[i];
@@ -266,7 +287,7 @@ namespace TheGameAnalyzer
                     break;
                 }
                 // If the card is within the delta but the start of a group then skip it.
-                if (group_it != ten_groups.end() && group_it->lo == hand[i])
+                if (group_it != ten_groups.end() && group_it->lo == i)
                 {
                     break;
                 }
@@ -294,6 +315,7 @@ namespace TheGameAnalyzer
                 play.hand_mask = card_mask;
             }
             play.pile_card_end = hand[i];
+            play.delta = play.pile_card_end - play.pile_card_start;
             hand_mask |= play.hand_mask;
             plays.push_back(std::move(play));
             last_card = hand[i];
@@ -301,11 +323,21 @@ namespace TheGameAnalyzer
         return plays;
     }
 
+    bool operator==(const Turn &t1, const Turn &t2)
+    {
+        return t1.hand_mask == t2.hand_mask &&
+               t1.piles == t2.piles;
+    }
+    bool operator!=(const Turn &t1, const Turn &t2)
+    {
+        return !(t1 == t2);
+    }
+
     std::string to_string(const Turn &turn)
     {
         std::ostringstream oss;
         oss << "{ piles: " << to_string(turn.piles)
-            << ", hand_mask: 0x" << std::hex << turn.hand_mask
+            << ", hand_mask: 0x" << std::hex << turn.hand_mask << std::dec
             << "\n";
         return oss.str();
     }
@@ -367,7 +399,7 @@ namespace TheGameAnalyzer
                                  const TenGroups &ten_groups, int min_cards_for_turn,
                                  int card_reach_distance)
     {
-        auto plays = get_plays_ascending(piles[piles_index], max_card, hand, ten_groups, min_cards_for_turn, card_reach_distance);
+        auto plays = get_plays_ascending(piles[piles_index], max_card, piles_index, hand, ten_groups, min_cards_for_turn, card_reach_distance);
         if (!plays.empty())
         {
             vec_of_plays.push_back(std::move(plays));
@@ -379,7 +411,7 @@ namespace TheGameAnalyzer
         flip_card(min_card);
         auto pile_card = piles[piles_index];
         flip_card(pile_card);
-        auto plays = get_plays_ascending(pile_card, min_card, hand, ten_groups, min_cards_for_turn, card_reach_distance);
+        auto plays = get_plays_ascending(pile_card, min_card, piles_index, hand, ten_groups, min_cards_for_turn, card_reach_distance);
         if (!plays.empty())
         {
             flip_plays(plays, hand.size());
@@ -416,41 +448,11 @@ namespace TheGameAnalyzer
         return vec_of_plays;
     }
 
-    struct BestTurnCalculator
-    {
-        BestTurnCalculator(const Hand &hand_, Turn &best_turn_, Plays &&plays_,
-                           int min_cards_for_turn_,
-                           int card_reach_distance_) : hand(hand_), best_turn(best_turn_),
-                                                       plays(plays_),
-                                                       min_cards_for_turn(min_cards_for_turn_),
-                                                       card_reach_distance(card_reach_distance_)
-        {
-            HandMask hm = {0};
-            for (const auto p : plays)
-            {
-                HandMask possible_conflict = p.hand_mask & hm;
-                if (possible_conflict != 0)
-                {
-                    conflict_mask |= possible_conflict;
-                }
-                hm |= p.hand_mask;
-            }
-        }
-        Hand hand;
-        Turn &best_turn;
-        Plays plays;
-        int min_cards_for_turn = 2;
-        int card_reach_distance = 1;
-        HandMask conflict_mask = 0;
-
-        void recurse(const Turn &cur_turn, size_t plays_index);
-    };
-
     Turn find_best_turn(const Piles &piles, const Hand &hand, int min_cards_for_turn, int card_reach_distance)
     {
         const auto vec_of_plays = get_vec_of_plays(piles, hand, min_cards_for_turn, card_reach_distance);
 
-        Turn best_turn;
+        Turn best_turn = {piles, 0};
         for (size_t i = 0; i < vec_of_plays.size(); ++i)
         {
             Plays plays;
@@ -492,12 +494,16 @@ namespace TheGameAnalyzer
                 hand_mask |= next_best_play->hand_mask;
                 plays.push_back(*next_best_play);
             }
-            BestTurnCalculator btc{hand,
-                                   best_turn,
-                                   std::move(plays),
+            const Turn cur_turn{piles, 0};
+            BestTurnCalculator btc{cur_turn,
+                                   plays,
                                    min_cards_for_turn,
                                    card_reach_distance};
-            btc.recurse(best_turn, 0);
+            const TurnCompare turn_compare{min_cards_for_turn, card_reach_distance};
+            if (turn_compare(best_turn, btc.get_best_turn()))
+            {
+                best_turn = btc.get_best_turn();
+            }
         }
         return best_turn;
     }
@@ -509,21 +515,32 @@ namespace TheGameAnalyzer
             return;
         }
         const Play &p = plays[plays_index];
-        if (cur_turn.piles[p.piles_index] == p.pile_card_start &&
-            (cur_turn.hand_mask & p.hand_mask) == 0)
+        if (cur_turn.piles[p.piles_index] == p.pile_card_start)
+
         {
-            Turn next_turn{cur_turn};
-            next_turn.piles[p.piles_index] = p.pile_card_end;
-            next_turn.hand_mask |= p.hand_mask;
-            const TurnCompare turn_compare{min_cards_for_turn, card_reach_distance};
-            if (turn_compare(best_turn, next_turn))
+            if ((cur_turn.hand_mask & p.hand_mask) == 0)
             {
-                best_turn = next_turn;
+                Turn next_turn{cur_turn};
+                next_turn.piles[p.piles_index] = p.pile_card_end;
+                next_turn.hand_mask |= p.hand_mask;
+                const TurnCompare turn_compare{min_cards_for_turn, card_reach_distance};
+                if (turn_compare(best_turn, next_turn))
+                {
+                    best_turn = next_turn;
+                }
+                recurse(next_turn, plays_index + 1);
+                if ((p.hand_mask & conflict_mask) == 0)
+                {
+                    return;
+                }
+                else
+                {
+                    conflict_mask &= ~p.hand_mask;
+                }
             }
-            recurse(next_turn, plays_index + 1);
-            if ((p.hand_mask & conflict_mask) == 0)
+            else
             {
-                return;
+                conflict_mask |= p.hand_mask;
             }
         }
         recurse(cur_turn, plays_index + 1);

@@ -36,8 +36,8 @@ namespace TheGameAnalyzer
                                                       { return i == 0; }) /
                                         num_games * 100.0;
         results.cards_left_average = std::accumulate(num_cards_played.begin(), num_cards_played.end(), 0) / num_games;
-        results.cards_left_stddev = std::sqrt(std::accumulate(num_cards_played.begin(), num_cards_played.end(), 0.0, [=](double d, int i)
-                                                              { return std::pow(static_cast<double>(i) - average, 2); }) /
+        results.cards_left_stddev = std::sqrt(std::accumulate(num_cards_played.begin(), num_cards_played.end(), 0.0, [&](double d, int i)
+                                                              { return d + std::pow(static_cast<double>(i) - results.cards_left_average, 2); }) /
                                               num_games);
         return results;
     }
@@ -50,10 +50,18 @@ namespace TheGameAnalyzer
         std::vector<size_t> seeds(static_cast<size_t>(num_trials));
         std::iota(seeds.begin(), seeds.end(), 0);
         std::vector<int> num_cards_played(static_cast<size_t>(num_trials));
-        const auto execution_policy = do_parallel ? std::execution::par : std::execution::seq;
         const auto print_game = num_trials == 1 ? PrintGame::Yes : PrintGame::No;
-        std::transform(execution_policy, seeds.begin(), seeds.end(), num_cards_played.begin(), [=](auto seed)
-                       { return play_game(seed, num_players, card_reach_distance_normal, card_reach_distance_endgame, print_game); });
-        return calculate_game_stats(num_cards_played);
+        // Blah. Is this any better? https://stackoverflow.com/questions/52975114/different-execution-policies-at-runtime
+        if (do_parallel)
+        {
+            std::transform(std::execution::par, seeds.begin(), seeds.end(), num_cards_played.begin(), [=](auto seed)
+                           { return play_game(seed, num_players, card_reach_distance_normal, card_reach_distance_endgame, print_game); });
+        }
+        else
+        {
+            std::transform(std::execution::seq, seeds.begin(), seeds.end(), num_cards_played.begin(), [=](auto seed)
+                           { return play_game(seed, num_players, card_reach_distance_normal, card_reach_distance_endgame, print_game); });
+        }
+        return calculate_games_stats(num_cards_played);
     }
 } // namespace TheGameAnalyzer
