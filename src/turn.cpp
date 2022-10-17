@@ -438,8 +438,8 @@ namespace TheGameAnalyzer
             auto flipped_hand = hand;
             flip_hand(flipped_hand);
 
-            const Card pile2_min_card = piles[2] >= piles[3] ? piles[3] : 1;
-            const Card pile3_min_card = piles[2] < piles[3] ? piles[2] : 1;
+            const Card pile2_min_card = piles[2] > piles[3] ? piles[3] : 1;
+            const Card pile3_min_card = piles[2] <= piles[3] ? piles[2] : 1;
             const auto ten_groups = get_ten_groups(flipped_hand);
 
             get_plays_helper_flipped(vec_of_plays, piles, 2, pile2_min_card, flipped_hand, ten_groups, min_cards_for_turn, card_reach_distance);
