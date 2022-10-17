@@ -1,5 +1,4 @@
 #include "game.hpp"
-#include "games.hpp"
 
 #include "cxxopts.hpp"
 
