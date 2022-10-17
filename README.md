@@ -7,7 +7,7 @@ With a basic strategy, how likely is that you have an excellent result (< 10 car
 ## Best strategies for an excellent result (<= 9 cards remaining)
 
 | # players | excellent result % | beat the game % | avg cards remaining | # reach | # reach (endgame) |
-|---|---|---|---|---|---|--|
+|---|---|---|---|---|---|
 | 1 | 44.7% | 11.15% | 12.6274 | 1 | 1 |
 | 2 | 73.8% | 17.0% | 7.3624 | 3 | 10 |
 | 3 | 57.72% | 6.6% | 11.5073 |  3 | 9 |
@@ -19,7 +19,7 @@ With a basic strategy, how likely is that you have an excellent result (< 10 car
 ## Best strategies for beating the game (0 cards remaining)
 
 | # players | excellent result % | beat the game % | avg cards remaining | # reach | # reach (endgame) |
-|---|---|---|---|---|---|--|
+|---|---|---|---|---|---|
 | 1 | 44.21% | 11.25% | 12.7398| 0 | 0 |
 | 2 | 73.17% | 17.88% | 7.4093 | 2 | 7 |
 | 3 | 56.48% | 7.01% | 11.7663 | 2 | 7 |
@@ -45,6 +45,7 @@ With a basic strategy, how likely is that you have an excellent result (< 10 car
 ## Analysis runs for 1 player
 
 | # reach | # reach (endgame) | avg cards remaining | stddev | excellent result % | beat the game % |
+|---|---|---|---|---|---|
 | **0** | **0** | 12.7398 | 10.454 | 44.21 | **11.25**|
 | 0 | 1 | 12.7398 | 10.454 | 44.21 | 11.25|
 | 0 | 2 | 12.7398 | 10.454 | 44.21 | 11.25|
@@ -60,6 +61,7 @@ With a basic strategy, how likely is that you have an excellent result (< 10 car
 ## Analysis runs for 2 players
 
 | # reach | # reach (endgame) | avg cards remaining | stddev | excellent result % | beat the game % |
+|---|---|---|---|---|---|
 | 0 | 0 | 9.3778 | 9.61765 | 64.83 | 11.87|
 | 0 | 7 | 8.8994 | 9.82877 | 67.35 | 15.48|
 | 0 | 8 | 8.8973 | 9.82752 | 67.49 | 15.34|
@@ -113,6 +115,7 @@ With a basic strategy, how likely is that you have an excellent result (< 10 car
 ## Analysis runs for 3 players
 
 | # reach | # reach (endgame) | avg cards remaining | stddev | excellent result % | beat the game % |
+|---|---|---|---|---|---|
 | 0 | 0 | 14.2451 | 11.4651 | 46.21 | 4.12|
 | 0 | 7 | 13.586 | 11.8377 | 50.58 | 5.7|
 | 0 | 8 | 13.5685 | 11.8454 | 50.85 | 5.53|
@@ -166,6 +169,7 @@ With a basic strategy, how likely is that you have an excellent result (< 10 car
 ## Analysis runs for 4 players
 
 | # reach | # reach (endgame) | avg cards remaining | stddev | excellent result % | beat the game % |
+|---|---|---|---|---|---|
 | 0 | 0 | 10.2544 | 9.34842 | 60.38 | 6.64|
 | 0 | 7 | 9.2417 | 9.48397 | 66.64 | 8.92|
 | 0 | 8 | 9.264 | 9.47031 | 66.53 | 8.88|
@@ -219,6 +223,7 @@ With a basic strategy, how likely is that you have an excellent result (< 10 car
 ## Analysis runs for 5 players
 
 | # reach | # reach (endgame) | avg cards remaining | stddev | excellent result % | beat the game % |
+|---|---|---|---|---|---|
 | 0 | 0 | 8.9153 | 7.86666 | 64.1 | 7.58|
 | 0 | 7 | 7.8174 | 7.81134 | 70.85 | 9.73|
 | 0 | 8 | 7.8842 | 7.81569 | 70.31 | 9.32|
