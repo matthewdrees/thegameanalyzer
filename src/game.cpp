@@ -137,10 +137,10 @@ namespace TheGameAnalyzer
     std::string to_string(const TheGamesResults &tgr)
     {
         std::ostringstream oss;
-        oss << "{ excellent_percent: " << tgr.excellent_percent
-            << ", beat_the_game_percent: " << tgr.beat_the_game_percent
-            << ", cards_left_average: " << tgr.cards_left_average
-            << ", cards_left_stddev: " << tgr.cards_left_stddev
+        oss << "{ \"excellent_percent\":" << tgr.excellent_percent
+            << ", \"beat_the_game_percent\": " << tgr.beat_the_game_percent
+            << ", \"cards_left_average\": " << tgr.cards_left_average
+            << ", \"cards_left_stddev\": " << tgr.cards_left_stddev
             << "}";
         return oss.str();
     }
