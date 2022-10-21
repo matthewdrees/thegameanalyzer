@@ -46,8 +46,9 @@ See tables below for more details.
 
 ## 1 player: excellent game percentage (less than 10 cards remaining)
 
-| reach distance (normal) | 0 | 1 | 2 | 3 |
-| reach distance (endgame) | | | | |
+| reach distance (normal →) | 0 | 1 | 2 | 3 |
+|---|---|---|---|---|
+| reach distance (endgame ↓) | | | | |
 | 0 | 44.53 |   |   |   |
 | 1 | 44.53 | 44.86 |   |   |
 | 2 | 44.53 | 44.86 | 44 |   |
@@ -56,8 +57,9 @@ See tables below for more details.
 
 ## 1 player: beat the game percentage (0 cards remaining)
 
-| reach distance (normal) | 0 | 1 | 2 | 3 |
-| reach distance (endgame) | | | | |
+| reach distance (normal →) | 0 | 1 | 2 | 3 |
+|---|---|---|---|---|
+| reach distance (endgame ↓) | | | | |
 | 0 | 11.77 |   |   |   |
 | 1 | 11.77 | 11.41 |   |   |
 | 2 | 11.77 | 11.41 | 10.87 |   |
@@ -66,8 +68,9 @@ See tables below for more details.
 
 ## 2 players: excellent game percentage (less than 10 cards remaining)
 
-| reach distance (normal) | 0 | 1 | 2 | 3 | 4 | 5 | 6 |
-| reach distance (endgame) | | | | | | | |
+| reach distance (normal →) | 0 | 1 | 2 | 3 | 4 | 5 | 6 |
+|---|---|---|---|---|---|---|---|
+| reach distance (endgame ↓) | | | | | | | |
 | 0 | 65.78 |   |   |   |   |   |   |
 | 1 | 66.4 | 70.3 |   |   |   |   |   |
 | 2 | 66.96 | 70.75 | 73.1 |   |   |   |   |
@@ -85,8 +88,9 @@ See tables below for more details.
 
 ## 2 players: beat the game percentage (0 cards remaining)
 
-| reach distance (normal) | 0 | 1 | 2 | 3 | 4 | 5 | 6 |
-| reach distance (endgame) | | | | | | | |
+| reach distance (normal →) | 0 | 1 | 2 | 3 | 4 | 5 | 6 |
+|---|---|---|---|---|---|---|---|
+| reach distance (endgame ↓) | | | | | | | |
 | 0 | 12.28 |   |   |   |   |   |   |
 | 1 | 13.62 | 15.07 |   |   |   |   |   |
 | 2 | 14.67 | 16.07 | 16.83 |   |   |   |   |
@@ -104,8 +108,9 @@ See tables below for more details.
 
 ## 3 players: excellent game % (less than 10 cards remaining)
 
-| reach distance (normal) | 0|1|2|3|4|5|6|
-| reach distance (endgame) | | | | | | | |
+| reach distance (normal →) | 0 | 1 | 2 | 3 | 4 | 5 | 6 |
+|---|---|---|---|---|---|---|---|
+| reach distance (endgame ↓) | | | | | | | |
 | 0 | 47.49|||||| |
 | 1 | 48.6|51.84||||| |
 | 2 | 49.53|52.66|55.06|||| |
@@ -123,8 +128,9 @@ See tables below for more details.
 
 ## 3 players: beat the game percentage (0 cards remaining)
 
-| reach distance (normal) | 0|1|2|3|4|5|6|
-| reach distance (endgame) | | | | | | | |
+| reach distance (normal →) | 0 | 1 | 2 | 3 | 4 | 5 | 6 |
+|---|---|---|---|---|---|---|---|
+| reach distance (endgame ↓) | | | | | | | |
 | 0 | 4.22|||||| |
 | 1 | 4.99|5.36||||| |
 | 2 | 5.43|5.93|6.53|||| |
@@ -142,8 +148,9 @@ See tables below for more details.
 
 ## 4 players: excellent game percentage (less than 10 cards remaining)
 
-| reach distance (normal) | 0 | 1 | 2 | 3 | 4 | 5 | 6 |
-| reach distance (endgame) | | | | | | | |
+| reach distance (normal →) | 0 | 1 | 2 | 3 | 4 | 5 | 6 |
+|---|---|---|---|---|---|---|---|
+| reach distance (endgame ↓) | | | | | | | |
 | 0 | 61.79 |   |   |   |   |   |   |
 | 1 | 64.41 | 66.13 |   |   |   |   |   |
 | 2 | 65.86 | 67.83 | 69.11 |   |   |   |   |
@@ -161,8 +168,9 @@ See tables below for more details.
 
 ## 4 players: beat the game percentage (0 cards remaining)
 
-| reach distance (normal) | 0 | 1 | 2 | 3 | 4 | 5 | 6 |
-| reach distance (endgame) | | | | | | | |
+| reach distance (normal →) | 0 | 1 | 2 | 3 | 4 | 5 | 6 |
+|---|---|---|---|---|---|---|---|
+| reach distance (endgame ↓) | | | | | | | |
 | 0 | 6.83 |   |   |   |   |   |   |
 | 1 | 7.92 | 8.45 |   |   |   |   |   |
 | 2 | 9.01 | 9.78 | 10 |   |   |   |   |
@@ -180,8 +188,9 @@ See tables below for more details.
 
 ## 5 players: excellent game percentage (less than 10 cards remaining)
 
-| reach distance (normal) | 0 | 1 | 2 | 3 | 4 | 5 | 6 |
-| reach distance (endgame) | | | | | | | |
+| reach distance (normal →) | 0 | 1 | 2 | 3 | 4 | 5 | 6 |
+|---|---|---|---|---|---|---|---|
+| reach distance (endgame ↓) | | | | | | | |
 | 0 | 64.85 |   |   |   |   |   |   |
 | 1 | 68.14 | 70.5 |   |   |   |   |   |
 | 2 | 70.13 | 72.55 | 73.76 |   |   |   |   |
@@ -199,8 +208,9 @@ See tables below for more details.
 
 ## 5 players: beat the game percentage (0 cards remaining)
 
-| reach distance (normal) | 0 | 1 | 2 | 3 | 4 | 5 | 6 |
-| reach distance (endgame) | | | | | | | |
+| reach distance (normal →) | 0 | 1 | 2 | 3 | 4 | 5 | 6 |
+|---|---|---|---|---|---|---|---|
+| reach distance (endgame ↓) | | | | | | | |
 | 0 | 7.68 |   |   |   |   |   |   |
 | 1 | 9.43 | 9.11 |   |   |   |   |   |
 | 2 | 10.5 | 10.05 | 11.22 |   |   |   |   |
