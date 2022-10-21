@@ -56,7 +56,7 @@ namespace TheGameAnalyzer
         std::vector<Turn> turns(hands.size());
         std::transform(hands.begin(), hands.end(), turns.begin(), [=, piles = std::cref(piles)](const auto &h)
                        { return find_best_turn(piles, h, min_cards_for_turn, card_reach_distance); });
-        const TurnCompare turn_compare{min_cards_for_turn, card_reach_distance};
+        const TurnCompare turn_compare{min_cards_for_turn};
         const auto max_turn_it = std::max_element(turns.begin(), turns.end(), turn_compare);
         return static_cast<size_t>(max_turn_it - turns.begin());
     }
@@ -64,12 +64,12 @@ namespace TheGameAnalyzer
     int play_game(uint32_t seed, int num_players, int card_reach_distance_normal,
                   int card_reach_distance_endgame, PrintGame print_game)
     {
-        assert(num_players >= MIN_PLAYERS);
-        assert(num_players <= MAX_PLAYERS);
-        assert(card_reach_distance_normal >= MIN_CARD_REACH_DISTANCE);
-        assert(card_reach_distance_normal <= MAX_CARD_REACH_DISTANCE);
-        assert(card_reach_distance_endgame >= MIN_CARD_REACH_DISTANCE);
-        assert(card_reach_distance_endgame <= MAX_CARD_REACH_DISTANCE);
+        assert(num_players >= MIN_PLAYERS && "Not enough players");
+        assert(num_players <= MAX_PLAYERS && "Too many players");
+        assert(card_reach_distance_normal >= MIN_CARD_REACH_DISTANCE && "Bad card reach distance");
+        assert(card_reach_distance_normal <= MAX_CARD_REACH_DISTANCE && "Bad card reach distance");
+        assert(card_reach_distance_endgame >= MIN_CARD_REACH_DISTANCE && "Bad card reach distance endgame");
+        assert(card_reach_distance_endgame <= MAX_CARD_REACH_DISTANCE && "Bad card reach distance endgame");
 
         Piles piles = {1, 1, 100, 100};
         std::vector<Hand> hands(static_cast<size_t>(num_players));

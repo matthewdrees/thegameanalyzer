@@ -33,6 +33,7 @@ namespace TheGameAnalyzer
         Card pile_card_start{0};
         Card pile_card_end{0};
         int delta{0};
+        inline bool is_group_reach() const { return delta > 0 && get_num_cards_in_hand_mask(hand_mask) > 1; }
     };
     bool operator==(const Play &p1, const Play &p2);
     bool operator!=(const Play &p1, const Play &p2);
@@ -94,48 +95,33 @@ namespace TheGameAnalyzer
                               const Hand &hand, const TenGroups &ten_groups,
                               int min_cards_for_turn, int card_reach_distance);
 
-    // The outcome of a player turn.
+    // Plays index for each pile of plays.
+    using PilesIndexes = std::array<size_t, 4>;
+
+    std::string to_string(PilesIndexes);
+
+    // The intermediate state and outcome of a player turn.
     struct Turn
     {
-        Piles piles{1, 1, 100, 100};
-        HandMask hand_mask{0}; // Mask of cards played from hand.
+        Piles piles{0};
+        HandMask hand_mask{0};
+        int delta{0};
+        PilesIndexes piles_indexes{0};
+        bool reached_for_group{false};
     };
     bool operator==(const Turn &t1, const Turn &t2);
     bool operator!=(const Turn &t1, const Turn &t2);
-    std::string to_string(const Turn &);
+    std::string to_string(const Turn &t);
 
     struct TurnCompare
     {
         int min_cards_for_turn;
-        int card_reach_distance;
         // \return true if t2 is better than t1.
         bool operator()(const Turn &t1, const Turn &t2) const;
     };
 
-    // Resolve best turn from stack of possible plays.
-    class BestTurnCalculator
-    {
-    public:
-        BestTurnCalculator(const Turn &cur_turn, const Plays &plays_,
-                           int min_cards_for_turn_,
-                           int card_reach_distance_) : plays(plays_),
-                                                       min_cards_for_turn(min_cards_for_turn_),
-                                                       card_reach_distance(card_reach_distance_)
-        {
-            recurse(cur_turn, 0);
-        }
-
-        Turn get_best_turn() const { return best_turn; }
-
-    private:
-        const Plays &plays;
-        int min_cards_for_turn;
-        int card_reach_distance;
-        Turn best_turn{{100, 100, 1, 1}, 0};
-        HandMask conflict_mask = 0;
-
-        void recurse(const Turn &cur_turn, size_t plays_index);
-    };
+    // Compare for starting hands
+    bool starting_hand_turn_compare(const Turn &t1, const Turn &t2);
 
     // Find the best turn for a given set of piles and hand.
     //
@@ -143,7 +129,8 @@ namespace TheGameAnalyzer
     // \param hand Hand.
     // \param min_cards_for_turn Minimum cards to be played for this turn.
     // \param card_reach_distance Amount to "reach" to play another card.
-    Turn find_best_turn(const Piles &, const Hand &, int min_cards_for_turn,
+    Turn find_best_turn(const Piles &, const Hand &,
+                        int min_cards_for_turn,
                         int card_reach_distance);
 
 } // namespace TheGameAnalyzer

@@ -323,33 +323,153 @@ namespace TheGameAnalyzer
         return plays;
     }
 
+    std::string to_string(PilesIndexes piles_indexes)
+    {
+        std::ostringstream oss;
+        oss << "{";
+        bool first = true;
+        for (const auto pi : piles_indexes)
+        {
+            if (first)
+            {
+                first = false;
+            }
+            else
+            {
+                oss << ",";
+            }
+            oss << pi;
+        }
+        oss << "}";
+        return oss.str();
+    }
+
     bool operator==(const Turn &t1, const Turn &t2)
     {
-        return t1.hand_mask == t2.hand_mask &&
-               t1.piles == t2.piles;
+        return t1.piles == t2.piles &&
+               t1.hand_mask == t2.hand_mask &&
+               t1.delta == t2.delta &&
+               t1.piles_indexes == t2.piles_indexes &&
+               t1.reached_for_group == t2.reached_for_group;
     }
     bool operator!=(const Turn &t1, const Turn &t2)
     {
         return !(t1 == t2);
     }
 
-    std::string to_string(const Turn &turn)
+    std::string to_string(const Turn &t)
     {
         std::ostringstream oss;
-        oss << "{ piles: " << to_string(turn.piles)
-            << ", hand_mask: 0x" << std::hex << turn.hand_mask << std::dec
+        oss << "{ piles: " << to_string(t.piles)
+            << ", hand_mask: 0x" << std::hex << t.hand_mask << std::dec
+            << ", delta: " << t.delta
+            << ", piles_indexes: " << to_string(t.piles_indexes)
+            << ", reached_for_group: " << t.reached_for_group
             << "\n";
         return oss.str();
-    }
-
-    static int add_piles(const Piles &piles)
-    {
-        return piles[0] + piles[1] - piles[2] - piles[3];
     }
 
     static int get_sum_of_pile_extremes(const Piles &piles)
     {
         return std::min(piles[0], piles[1]) - std::max(piles[2], piles[3]);
+    }
+
+    using PilesOfPlays = std::array<Plays, 4>;
+
+    PilesOfPlays get_piles_of_plays(const Piles &piles, const Hand &hand, int min_cards_for_turn, int card_reach_distance)
+    {
+        PilesOfPlays piles_of_plays;
+        Piles bound_cards = {100, 100, 1, 1};
+        // ascending piles
+        {
+            if (piles[0] <= piles[1])
+            {
+                bound_cards[0] = piles[1];
+            }
+            else
+            {
+                bound_cards[1] = piles[0];
+            }
+            const auto ten_groups = get_ten_groups(hand);
+
+            for (size_t i = 0; i < 2; ++i)
+            {
+                piles_of_plays[i] = get_plays_ascending(piles[i], bound_cards[i], i, hand, ten_groups, min_cards_for_turn, card_reach_distance);
+            }
+        }
+
+        // descending piles
+        {
+            auto flipped_hand = hand;
+            flip_hand(flipped_hand);
+            if (piles[2] <= piles[3])
+            {
+                bound_cards[3] = piles[2];
+            }
+            else
+            {
+                bound_cards[2] = piles[3];
+            }
+            const auto ten_groups = get_ten_groups(flipped_hand);
+
+            for (size_t i = 2; i < 4; ++i)
+            {
+                flip_card(bound_cards[i]);
+                auto pile_card = piles[i];
+                flip_card(pile_card);
+                piles_of_plays[i] = get_plays_ascending(pile_card, bound_cards[i], i, flipped_hand, ten_groups, min_cards_for_turn, card_reach_distance);
+                flip_plays(piles_of_plays[i], hand.size());
+            }
+        }
+        return piles_of_plays;
+    }
+
+    // Get the piles_index for the next smallest possible play, if possible.
+    std::optional<size_t> get_next_min_play_piles_index(const PilesOfPlays &piles_of_plays, const PilesIndexes &piles_indexes, HandMask hand_mask)
+    {
+        std::optional<size_t> piles_index;
+        for (size_t pi = 0; pi < piles_of_plays.size(); ++pi)
+        {
+            const auto &plays = piles_of_plays[pi];
+            const size_t play_index = piles_indexes[pi];
+            if (play_index >= plays.size())
+            {
+                continue;
+            }
+            const auto &play = plays[play_index];
+            if ((play.hand_mask & hand_mask) != 0)
+            {
+                continue;
+            }
+            if (!piles_index)
+            {
+                piles_index = pi;
+                continue;
+            }
+            const auto &prev_play = piles_of_plays[*piles_index][piles_indexes[*piles_index]];
+            if (play.delta != prev_play.delta)
+            {
+                if (play.delta < prev_play.delta)
+                {
+                    piles_index = pi;
+                }
+            }
+            else if (prev_play.is_group_reach() && !play.is_group_reach())
+            {
+                piles_index = pi;
+            }
+        }
+        return piles_index;
+    }
+
+    void update_turn_from_play(const Play &play, size_t pi, Turn &t)
+    {
+        assert(t.piles[pi] == play.pile_card_start && "Pile card not expected for play.");
+        t.piles[pi] = play.pile_card_end;
+        t.hand_mask |= play.hand_mask;
+        t.delta += play.delta;
+        ++t.piles_indexes[pi];
+        t.reached_for_group = t.reached_for_group || play.is_group_reach();
     }
 
     bool TurnCompare::operator()(const Turn &t1, const Turn &t2) const
@@ -360,189 +480,98 @@ namespace TheGameAnalyzer
         const bool t2_has_min_cards = t2_num_cards >= min_cards_for_turn;
         if (t1_has_min_cards != t2_has_min_cards)
         {
-            // 1. One turn has minimum cards played and the other doesn't...
+            // 1. Prefer minimum number of cards played.
             return t2_has_min_cards;
         }
-        const int piles1_sum = add_piles(t1.piles);
-        const int piles2_sum = add_piles(t2.piles);
-        const int delta_per_card = piles2_sum - piles1_sum + (t1_num_cards - t2_num_cards) * card_reach_distance;
-        if (delta_per_card < 0)
+        if (t1.delta != t2.delta)
         {
-            // 2. ... otherwise prefer the better points/card played...
-            return true;
+            // 2. Prefer smaller delta.
+            return t2.delta < t1.delta;
         }
-        else if (delta_per_card == 0)
+        else if (t1.reached_for_group != t2.reached_for_group)
         {
-            if (t1_num_cards < t2_num_cards)
+            // 3. Prefer the plays that didn't reach for a group.
+            return t1.reached_for_group;
+        }
+        else if (t1_num_cards != t2_num_cards)
+        {
+            // 4. Prefer the turn that used more cards.
+            return t2_num_cards > t1_num_cards;
+        }
+        else
+        {
+            // 5. Prefer to keep the numbers on the extreme intact.
+            const int sum_of_pile_extremes1 = get_sum_of_pile_extremes(t1.piles);
+            const int sum_of_pile_extremes2 = get_sum_of_pile_extremes(t2.piles);
+            if (sum_of_pile_extremes2 < sum_of_pile_extremes1)
             {
-                // 3. ... otherwise prefer the turn with more cards...
                 return true;
             }
-            if (t1_num_cards == t2_num_cards)
-            {
-                const int sum_of_pile_extremes1 = get_sum_of_pile_extremes(t1.piles);
-                const int sum_of_pile_extremes2 = get_sum_of_pile_extremes(t2.piles);
-                if (sum_of_pile_extremes2 < sum_of_pile_extremes1)
-                {
-                    // 4. ... otherwise prefer to keep the extreme piles intact...
-                    return true;
-                }
-                // TBD: 5. ... otherwise prefer the up/down direction with the
-                // lowest combined action?
-            }
         }
+
         return false;
     }
 
-    static void get_plays_helper(std::vector<Plays> &vec_of_plays, const Piles &piles,
-                                 size_t piles_index, Card max_card, const Hand &hand,
-                                 const TenGroups &ten_groups, int min_cards_for_turn,
-                                 int card_reach_distance)
+    Turn get_best_min_cards_all_piles(const Piles &piles, const PilesOfPlays &piles_of_plays, int min_cards_for_turn)
     {
-        auto plays = get_plays_ascending(piles[piles_index], max_card, piles_index, hand, ten_groups, min_cards_for_turn, card_reach_distance);
-        if (!plays.empty())
+        Turn t;
+        t.piles = piles;
+        std::optional<size_t> pi;
+        while ((pi = get_next_min_play_piles_index(piles_of_plays, t.piles_indexes, t.hand_mask)).has_value())
         {
-            vec_of_plays.push_back(std::move(plays));
+            const Play &play = piles_of_plays[*pi][t.piles_indexes[*pi]];
+            update_turn_from_play(play, *pi, t);
+            if (get_num_cards_in_hand_mask(t.hand_mask) >= min_cards_for_turn)
+            {
+                break;
+            }
         }
+        return t;
     }
 
-    static void get_plays_helper_flipped(std::vector<Plays> &vec_of_plays, const Piles &piles, size_t piles_index, Card min_card, const Hand &hand, const TenGroups &ten_groups, int min_cards_for_turn, int card_reach_distance)
+    Turn get_best_min_cards_in_pile(const Piles &piles, const Plays &plays, size_t piles_index, int min_cards_for_turn)
     {
-        flip_card(min_card);
-        auto pile_card = piles[piles_index];
-        flip_card(pile_card);
-        auto plays = get_plays_ascending(pile_card, min_card, piles_index, hand, ten_groups, min_cards_for_turn, card_reach_distance);
-        if (!plays.empty())
+        Turn t;
+        t.piles = piles;
+        for (const auto &play : plays)
         {
-            flip_plays(plays, hand.size());
-            vec_of_plays.push_back(std::move(plays));
+            update_turn_from_play(play, piles_index, t);
+            if (get_num_cards_in_hand_mask(t.hand_mask) >= min_cards_for_turn)
+            {
+                break;
+            }
         }
+        return t;
     }
 
-    std::vector<Plays> get_vec_of_plays(const Piles &piles, const Hand &hand, int min_cards_for_turn, int card_reach_distance)
+    void play_reach_cards(const PilesOfPlays &piles_of_plays, int card_reach_distance, Turn &t)
     {
-        std::vector<Plays> vec_of_plays;
-
-        // ascending piles
+        std::optional<size_t> pi;
+        while ((pi = get_next_min_play_piles_index(piles_of_plays, t.piles_indexes, t.hand_mask)).has_value())
         {
-            const Card pile0_max_card = piles[0] <= piles[1] ? piles[1] : 100;
-            const Card pile1_max_card = piles[0] > piles[1] ? piles[0] : 100;
-            const auto ten_groups = get_ten_groups(hand);
-
-            get_plays_helper(vec_of_plays, piles, 0, pile0_max_card, hand, ten_groups, min_cards_for_turn, card_reach_distance);
-            get_plays_helper(vec_of_plays, piles, 1, pile1_max_card, hand, ten_groups, min_cards_for_turn, card_reach_distance);
+            const Play &play = piles_of_plays[*pi][t.piles_indexes[*pi]];
+            if (play.delta > card_reach_distance)
+            {
+                break;
+            }
+            update_turn_from_play(play, *pi, t);
         }
-
-        // descending piles
-        {
-            auto flipped_hand = hand;
-            flip_hand(flipped_hand);
-
-            const Card pile2_min_card = piles[2] > piles[3] ? piles[3] : 1;
-            const Card pile3_min_card = piles[2] <= piles[3] ? piles[2] : 1;
-            const auto ten_groups = get_ten_groups(flipped_hand);
-
-            get_plays_helper_flipped(vec_of_plays, piles, 2, pile2_min_card, flipped_hand, ten_groups, min_cards_for_turn, card_reach_distance);
-            get_plays_helper_flipped(vec_of_plays, piles, 3, pile3_min_card, flipped_hand, ten_groups, min_cards_for_turn, card_reach_distance);
-        }
-        return vec_of_plays;
     }
 
     Turn find_best_turn(const Piles &piles, const Hand &hand, int min_cards_for_turn, int card_reach_distance)
     {
-        const auto vec_of_plays = get_vec_of_plays(piles, hand, min_cards_for_turn, card_reach_distance);
-
-        Turn best_turn = {piles, 0};
-        for (size_t i = 0; i < vec_of_plays.size(); ++i)
+        PilesOfPlays piles_of_plays = get_piles_of_plays(piles, hand, min_cards_for_turn, card_reach_distance);
+        Turn best_turn = get_best_min_cards_all_piles(piles, piles_of_plays, min_cards_for_turn);
+        for (size_t pi = 0; pi < piles.size(); ++pi)
         {
-            Plays plays;
-            HandMask hand_mask = 0;
-            std::array<size_t, 4> plays_indexes = {0};
+            auto pile_turn = get_best_min_cards_in_pile(piles, piles_of_plays[pi], pi, min_cards_for_turn);
+            const TurnCompare turn_compare{min_cards_for_turn};
+            if (turn_compare(best_turn, pile_turn))
             {
-                // Force the top of each pile once.
-                const Play &p = vec_of_plays[i][plays_indexes[i]++];
-                hand_mask |= p.hand_mask;
-                plays.push_back(p);
-            }
-            // Find all next possible moves
-            while (true)
-            {
-                // Find the next best move.
-                std::optional<Play> next_best_play;
-                for (size_t j = 0; j < vec_of_plays.size(); ++j)
-                {
-                    size_t &idx = plays_indexes[j];
-                    if (idx < vec_of_plays[j].size())
-                    {
-                        const Play &p = vec_of_plays[j][idx];
-                        if (!next_best_play || p.delta < next_best_play->delta)
-                        {
-                            next_best_play = p;
-                            ++idx;
-                        }
-                    }
-                }
-                if (!next_best_play)
-                {
-                    break;
-                }
-                if ((get_num_cards_in_hand_mask(hand_mask) >= min_cards_for_turn) &&
-                    (next_best_play->delta > card_reach_distance))
-                {
-                    break;
-                }
-                hand_mask |= next_best_play->hand_mask;
-                plays.push_back(*next_best_play);
-            }
-            const Turn cur_turn{piles, 0};
-            BestTurnCalculator btc{cur_turn,
-                                   plays,
-                                   min_cards_for_turn,
-                                   card_reach_distance};
-            const TurnCompare turn_compare{min_cards_for_turn, card_reach_distance};
-            if (turn_compare(best_turn, btc.get_best_turn()))
-            {
-                best_turn = btc.get_best_turn();
+                best_turn = pile_turn;
             }
         }
+        play_reach_cards(piles_of_plays, card_reach_distance, best_turn);
         return best_turn;
-    }
-
-    void BestTurnCalculator::recurse(const Turn &cur_turn, size_t plays_index)
-    {
-        if (plays_index >= plays.size())
-        {
-            return;
-        }
-        const Play &p = plays[plays_index];
-        if (cur_turn.piles[p.piles_index] == p.pile_card_start)
-
-        {
-            if ((cur_turn.hand_mask & p.hand_mask) == 0)
-            {
-                Turn next_turn{cur_turn};
-                next_turn.piles[p.piles_index] = p.pile_card_end;
-                next_turn.hand_mask |= p.hand_mask;
-                const TurnCompare turn_compare{min_cards_for_turn, card_reach_distance};
-                if (turn_compare(best_turn, next_turn))
-                {
-                    best_turn = next_turn;
-                }
-                recurse(next_turn, plays_index + 1);
-                if ((p.hand_mask & conflict_mask) == 0)
-                {
-                    return;
-                }
-                else
-                {
-                    conflict_mask &= ~p.hand_mask;
-                }
-            }
-            else
-            {
-                conflict_mask |= p.hand_mask;
-            }
-        }
-        recurse(cur_turn, plays_index + 1);
     }
 } // namespace TheGameAnalyzer

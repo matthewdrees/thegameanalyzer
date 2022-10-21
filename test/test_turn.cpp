@@ -223,68 +223,90 @@ int test_turn_compare()
     const TestCase test_cases[] = {
         // 1. One has min cards, the other doesn't
         {
-            {{1, 1, 100, 90}, 0x1},
-            {{1, 1, 100, 100}, 0x3},
+            {{1, 1, 100, 90}, 0x1, 8, {0, 0, 0, 0}, false},
+            {{1, 1, 100, 100}, 0x3, 9, {0, 0, 0, 0}, false},
             2,
             1,
             true,
         },
         {
-            {{1, 1, 100, 100}, 0x3},
-            {{1, 1, 100, 90}, 0x1},
+            {{1, 1, 100, 100}, 0x3, 9, {0, 0, 0, 0}, false},
+            {{1, 1, 100, 90}, 0x1, 8, {0, 0, 0, 0}, false},
             2,
             1,
             false,
         },
-        // 2. points/card played
+        // 2. smaller delta
         {
-            {{1, 1, 100, 100}, 0x3},
-            {{4, 1, 100, 100}, 0x7},
+            {{1, 1, 100, 100}, 0x3, 1, {0, 0, 0, 0}, false},
+            {{4, 1, 100, 100}, 0x7, 2, {0, 0, 0, 0}, false},
             2,
             1,
             false,
         },
         {
-            {{1, 1, 100, 100}, 0x3},
-            {{1, 2, 100, 100}, 0x7},
+            {{1, 1, 100, 100}, 0x3, 2, {0, 0, 0, 0}, false},
+            {{1, 2, 100, 100}, 0x7, 1, {0, 0, 0, 0}, false},
             2,
             1,
             true,
         },
-        // 3. turn with more cards
+        // 3. reached for a group
         {
-            {{1, 3, 100, 100}, 0x7},
-            {{1, 1, 98, 100}, 0x3},
+            {{1, 3, 100, 100}, 0x7, 8, {0, 0, 0, 0}, true},
+            {{1, 1, 98, 100}, 0x3, 8, {0, 0, 0, 0}, false},
+            2,
+            1,
+            true,
+        },
+        {
+            {{1, 3, 100, 100}, 0x7, 8, {0, 0, 0, 0}, false},
+            {{1, 1, 98, 100}, 0x3, 8, {0, 0, 0, 0}, true},
             2,
             1,
             false,
         },
-        // 4. keep extremes intact
+        // 4. turn that used more cards
         {
-            {{5, 10, 98, 100}, 0x7},
-            {{7, 10, 100, 100}, 0x7},
+            {{1, 3, 100, 100}, 0x7, 8, {0, 0, 0, 0}, false},
+            {{1, 1, 98, 100}, 0x3, 8, {0, 0, 0, 0}, false},
             2,
             1,
             false,
         },
         {
-            {{7, 10, 100, 100}, 0x7},
-            {{5, 10, 98, 100}, 0x7},
+            {{1, 3, 100, 100}, 0x3, 8, {0, 0, 0, 0}, false},
+            {{1, 1, 98, 100}, 0x7, 8, {0, 0, 0, 0}, false},
+            2,
+            1,
+            true,
+        },
+        // 5. keep extremes intact
+        {
+            {{5, 10, 98, 100}, 0x7, 8, {0, 0, 0, 0}, false},
+            {{7, 10, 100, 100}, 0x7, 8, {0, 0, 0, 0}, false},
+            2,
+            1,
+            false,
+        },
+        {
+            {{7, 10, 100, 100}, 0x7, 8, {0, 0, 0, 0}, false},
+            {{5, 10, 98, 100}, 0x7, 8, {0, 0, 0, 0}, false},
             2,
             1,
             true,
         },
         // 5. Tiebreaker fall-thru
         {
-            {{1, 1, 98, 100}, 0x7},
-            {{1, 3, 100, 100}, 0x7},
+            {{1, 1, 98, 100}, 0x7, 8, {0, 0, 0, 0}, false},
+            {{1, 3, 100, 100}, 0x7, 8, {0, 0, 0, 0}, false},
             2,
             1,
             false,
         },
         {
-            {{5, 10, 90, 98}, 0x7},
-            {{7, 10, 90, 100}, 0x7},
+            {{5, 10, 90, 98}, 0x7, 8, {0, 0, 0, 0}, true},
+            {{7, 10, 90, 100}, 0x7, 8, {0, 0, 0, 0}, true},
             2,
             1,
             false,
@@ -293,7 +315,7 @@ int test_turn_compare()
     int num_fails = 0;
     for (const auto &tc : test_cases)
     {
-        const TurnCompare turn_compare{tc.min_cards_for_turn, tc.card_reach_distance};
+        const TurnCompare turn_compare{tc.min_cards_for_turn};
         const auto act = turn_compare(tc.t1, tc.t2);
         if (tc.exp != act)
         {
@@ -310,39 +332,6 @@ int test_turn_compare()
     return num_fails;
 }
 
-int test_BestTurnCalculator()
-{
-    struct TestCase
-    {
-        Piles piles;
-        Plays plays;
-        Turn exp;
-    };
-    const TestCase test_cases[] = {
-        {{1, 10, 15, 100}, {{0x1, 1, 10, 13, 3}, {0x1, 2, 15, 13, 2}}, {{1, 10, 13, 100}, 0x1}},
-        {{1, 10, 15, 100}, {{0x1, 1, 10, 12, 2}, {0x1, 2, 15, 12, 3}}, {{1, 12, 15, 100}, 0x1}},
-    };
-    int num_fails = 0;
-    for (const auto &tc : test_cases)
-    {
-        const Turn cur_turn{tc.piles, 0};
-        BestTurnCalculator btc(cur_turn, tc.plays, 2, 1);
-        const auto act = btc.get_best_turn();
-        if (tc.exp != act)
-        {
-            ++num_fails;
-            std::cerr << __FILE__ << ":" << __LINE__ << ". FAIL, " << __FUNCTION__
-                      << "(piles: " << to_string(tc.piles)
-                      << ", plays: " << to_string(tc.plays)
-                      << ", min_cards: " << 2
-                      << ", crd: " << 1 << ")"
-                      << ", exp: " << to_string(tc.exp)
-                      << ", act: " << to_string(act) << "\n";
-        }
-    }
-    return num_fails;
-}
-
 int test_find_best_turn_2_1()
 {
     struct TestCase
@@ -353,7 +342,7 @@ int test_find_best_turn_2_1()
     };
 
     const TestCase test_cases[] = {
-        {{1, 8, 100, 100}, {6, 11, 20, 24, 51, 53, 57, 92}, {{6, 11, 100, 100}, 0x3}},
+        {{1, 8, 100, 100}, {6, 11, 20, 24, 51, 53, 57, 92}, {{6, 11, 100, 100}, 0x3, 8, {1, 1, 0, 0}, false}},
     };
     int num_fails = 0;
     for (const auto &tc : test_cases)
@@ -382,7 +371,6 @@ int main()
                           test_get_ten_groups() +
                           test_get_plays_ascending_2_cards_1_over() +
                           test_turn_compare() +
-                          test_BestTurnCalculator() +
                           test_find_best_turn_2_1();
 
     return num_fails != 0;
