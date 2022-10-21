@@ -5,7 +5,7 @@ We are having a lot of fun playing [The Game (card game)](https://boardgamegeek.
 Three questions arose:
 1. What is the ideal _reach distance_ for playing extra cards on a turn?
 2. With this optimal basic strategy, how likely is that you have an excellent result (less than 10 cards remaining) or beat the game (0 cards remaining)?
-3. I once played 6 cards for a delta of 30 points in a 4 player game. This was not well received at the time, and remains criticized to this day. Was it a dumb move? (I can answer this now, that style of play reduces the chances of an excellent result and/or beating the game by ~2%, so "yes".)
+3. I once played 6 cards on a turn for a combined pile change of 30 in a 4 player game. This was not well received at the time, and remains criticized to this day. Was it a dumb move? (I can answer this now, that style of play reduces the chances of an excellent result and/or beating the game by ~2%, so "yes".)
 
 ## What is the ideal reach distance to play extra cards?
 
